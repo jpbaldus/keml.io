@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.Iterator;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -53,6 +54,9 @@ public class GraphML2KEML {
 		Author author = factory.createAuthor();
 		conversation.setAuthor(author);
 		
+		HashMap<String, Object> kemlNodes = new HashMap();
+		
+		
 		NodeList nodeList = doc.getElementsByTagName("node");
 
 		System.out.println(nodeList.getLength());
@@ -80,9 +84,10 @@ public class GraphML2KEML {
 								// we just need the pre-knowledge from it, that has <y:GenericNode configuration="com.yworks.bpmn.Artifact.withShadow">
 								if (childNode.getAttributes().item(0).getNodeValue().equals("com.yworks.bpmn.Artifact.withShadow")) {
 									System.out.println("Found preknowledge");
-									PreKnowledge pre = readPreKnowledge(childNode);
-									//author.
-									
+									String label = readLabel(childNode);
+									PreKnowledge pre = 	factory.createPreKnowledge();
+									pre.setMessage(label);
+									kemlNodes.put(id, pre);
 								}
 								break;
 							}
@@ -112,13 +117,12 @@ public class GraphML2KEML {
 								
 		}
 		
+		System.out.println(kemlNodes.toString());
 		
 		return conversation;
 	}
 	
-	//called on <y:GenericNode configuration="com.yworks.bpmn.Artifact.withShadow">
-	private PreKnowledge readPreKnowledge(Node node) {
-		
+	private String readLabel(Node node) {
 		NodeList children = node.getChildNodes();
 		String label = "";
 		
@@ -129,11 +133,10 @@ public class GraphML2KEML {
 				label = cleanLabel(label);
 				println(label);
 			}			
-		}	
-		PreKnowledge res = factory.createPreKnowledge();
-		res.setMessage(label);
-		return res;		
+		}
+		return label;
 	}
+	
 	
 	private String cleanLabel(String s) {
 		return s.trim().replace('\n', ' ');

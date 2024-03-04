@@ -22,7 +22,7 @@ public class IOProvider {
 		String currentPath = new java.io.File(".").getCanonicalPath();
 		System.out.println("Current dir:" + currentPath);
 		GraphML2KEML myReader = new GraphML2KEML();
-		Conversation conv = myReader.readFromPath("../../graphs/objective3-2-2v2.graphml");
+		Conversation conv = myReader.readFromPath("../../graphs/objective3-2-2v4.graphml");
 		System.out.println(conv.getTitle());
 	
 

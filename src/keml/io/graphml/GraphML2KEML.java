@@ -66,7 +66,7 @@ public class GraphML2KEML {
 		
 		HashMap<String, Pair<Float, Float>> conversationPartnerXs = new HashMap<String, Pair<Float, Float>>(); // helper map for all conversation partners
 		
-		HashMap<String, Pair<Float, Float>> messageExecutionXs = new HashMap<String, Pair<Float, Float>>(); // helper map for all possible message executions
+		HashMap<String, PositionalInformation> messageExecutionXs = new HashMap<String, PositionalInformation>(); // helper map for all possible message executions
 
 		
 		
@@ -146,7 +146,8 @@ public class GraphML2KEML {
 									}
 									case "#C0C0C0": { //grey, used for message executions
 										//we need this to complete the edges, we will just model the messageSpecs on author explicitly but first put all into the messageExecutionXs
-										Pair<Float, Float> xPositions = readXPositions(childNode);
+										// also need y position to order them on the author
+										PositionalInformation xPositions = readPositions(childNode);
 										messageExecutionXs.put(id, xPositions);
 									}
 									default: {
@@ -230,6 +231,22 @@ public class GraphML2KEML {
 			}			
 		}
 		return color;
+	}
+	
+	private PositionalInformation readPositions(Node node) {
+		Element e = (Element) node;
+		NamedNodeMap geo = e.getElementsByTagName("y:Geometry")
+		.item(0).getAttributes();
+		String x = geo.getNamedItem("x").getNodeValue();
+		Float xl = Float.parseFloat(x);
+		String width = geo.getNamedItem("width").getNodeValue();
+		Float xr = xl + Float.parseFloat(width);
+		String y = geo.getNamedItem("y").getNodeValue();
+		Float yl = Float.parseFloat(y);
+		String height = geo.getNamedItem("height").getNodeValue();
+		Float yh = yl + Float.parseFloat(height);
+		return new PositionalInformation(xl, xr, yl, yh);
+		
 	}
 	
 	private Pair<Float, Float> readXPositions(Node node) {

@@ -65,7 +65,11 @@ public class GraphML2KEML {
 		HashMap<String, PositionalInformation> conversationPartnerXs = new HashMap<String, PositionalInformation>(); // helper map for all conversation partners' positions	
 		HashMap<String, PositionalInformation> potentialMessageExecutionXs = new HashMap<String, PositionalInformation>(); // helper map for all possible message executions
 
+		HashMap<String, PositionalInformation> informationPositions = new HashMap<String, PositionalInformation>();
+		HashMap<String, PositionalInformation> informationIsInstructionPositions = new HashMap<String, PositionalInformation>();
+		HashMap<String, PositionalInformation> informationIsNoInstructionPositions = new HashMap<String, PositionalInformation>();
 		
+		HashMap<String, String> ignoreNodes = new HashMap<String, String>();
 		
 		NodeList nodeList = doc.getElementsByTagName("node");
 
@@ -94,7 +98,7 @@ public class GraphML2KEML {
 								// each one with a label forms a new conversation partner (except for Author)
 								String label = readLabel(childNode);
 								if (!label.equals("")) {
-									// this is a life line, determine xleft and xright
+									// this is a life line, determine Position
 									PositionalInformation x = readPositions(childNode);
 									if (label.equals("Author")) {
 										authorPosition = x;
@@ -105,8 +109,8 @@ public class GraphML2KEML {
 										conversationPartnerXs.put(id, x);
 									}
 								} else { //just icons on information (isInstruction = true) and the extra computer on the LLM
-									
-									
+									// TODO maybe need because of edges pointing here rather than on the main part? Currently skip (ignoreNodes) 	
+									ignoreNodes.put(id, id);
 								}								
 								break;
 							}
@@ -126,48 +130,36 @@ public class GraphML2KEML {
 								System.out.println("Found Shape");
 								// TODO switch by color
 								String color = readColor(childNode);
+								PositionalInformation pos = readPositions(childNode);
+
 								switch (color) {
-									case "#FFFF99": { //light-yellow, used on information by Webbrowser
-										break;
-									}
+									case "#FFFF99":  //light-yellow, used on information by WebBrowser
 									case "#CCFFFF": { // light-blue, used on information by LLM
+										String label = readLabel(childNode);
+										NewInformation info = factory.createNewInformation();
+										info.setMessage(label);
+										kemlNodes.put(id, info);
+										// also store positions to find corresponding ! or person
+										informationPositions.put(id, pos);								
 										break;
 									}
 									case "#99CC00": { //green, used on facts (!)
-										
-										
+										informationIsNoInstructionPositions.put(id, pos);								
 										break;
 									}
 									case "#FFCC00": { // yellow, behind human icon (isInstruction = true)
+										informationIsInstructionPositions.put(id, pos);								
 										break;
 										
 									}
 									case "#C0C0C0": { //grey, used for message executions
 										//we need this to complete the edges, we will just model the messageSpecs on author explicitly but first put all into the messageExecutionXs
 										// also need y position to order them on the author
-										PositionalInformation xPositions = readPositions(childNode);
-										potentialMessageExecutionXs.put(id, xPositions);
+										potentialMessageExecutionXs.put(id, pos);
 										break;
 									}
 									default: {
 										throw new IllegalArgumentException("Unrecognized color: "+color);
-									}
-								}
-								
-								String label = readLabel(childNode);
-								switch (label) {
-									case null: break;
-									case (""): break;
-									case ("!"): {
-										// this is an addition to an information, meaning it is a fact (isInstruction = false)
-										// TODO link to a new information via position
-										break;
-									}
-									default: {
-										NewInformation info = factory.createNewInformation();
-										info.setMessage(label);
-										kemlNodes.put(id, info);
-										// todo maybe first collect corresponding ! or icon?
 									}
 								}	
 								break;
@@ -179,8 +171,7 @@ public class GraphML2KEML {
 					}		
 					cur.getChildNodes().getLength();
 				}
-			}
-								
+			}								
 		}
 		
 		System.out.println(kemlNodes.toString());
@@ -192,20 +183,28 @@ public class GraphML2KEML {
 		println(conversationPartnerXs.toString());
 		println(potentialMessageExecutionXs.toString());
 		
+		println(ignoreNodes.toString());
+		println("Infos:");
+		println(informationPositions.toString());
+		println("IsInstruction:");
+		println(informationIsInstructionPositions.toString());
+		println("NoInstruction:");
+		println(informationIsNoInstructionPositions.toString());
+		
 		return conversation;
 	}
 	
 	private String readLabel(Node node) {
-		NodeList children = node.getChildNodes();
 		String label = "";
-		
-		for (int i=0; i<children.getLength(); i++) {
-			Node childNode = children.item(i);
-			if (childNode.getNodeName().equals("y:NodeLabel") && childNode.getAttributes().getNamedItem("hasText") == null) { //a text exists
+		Element e = (Element) node;
+		NodeList nodeLabels = e.getElementsByTagName("y:NodeLabel");
+		for (int i=0; i<nodeLabels.getLength(); i++) {
+			Node childNode = nodeLabels.item(i);
+			if (childNode.getAttributes().getNamedItem("hasText") == null) {//a text exists
 				label = childNode.getChildNodes().item(0).getNodeValue(); //TODO is item 0 guaranteed?
 				label = cleanLabel(label);
 				println(label);
-			}			
+			}
 		}
 		return label;
 	}

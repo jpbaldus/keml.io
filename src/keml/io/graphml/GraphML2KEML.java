@@ -211,24 +211,16 @@ public class GraphML2KEML {
 	}
 	
 	private String readColor(Node node) {
-		NodeList children = node.getChildNodes();
-		String color = "";
-		
-		for (int i=0; i<children.getLength(); i++) {
-			Node childNode = children.item(i);
-			if (childNode.getNodeName().equals("y:Fill")) {
-				color = childNode.getAttributes().getNamedItem("color").getNodeValue();
-				color = cleanLabel(color);
-				println(color);
-			}			
-		}
+		Element e = (Element) node;
+		NamedNodeMap fill = e.getElementsByTagName("y:Fill").item(0).getAttributes();
+		String color = fill.getNamedItem("color").getNodeValue();
+		println(color);
 		return color;
 	}
 	
 	private PositionalInformation readPositions(Node node) {
 		Element e = (Element) node;
-		NamedNodeMap geo = e.getElementsByTagName("y:Geometry")
-		.item(0).getAttributes();
+		NamedNodeMap geo = e.getElementsByTagName("y:Geometry").item(0).getAttributes();
 		String x = geo.getNamedItem("x").getNodeValue();
 		Float xl = Float.parseFloat(x);
 		String width = geo.getNamedItem("width").getNodeValue();

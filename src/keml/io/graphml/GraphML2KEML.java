@@ -191,6 +191,12 @@ public class GraphML2KEML {
 		println("NoInstruction:");
 		println(informationIsNoInstructionPositions.toString());
 		
+		// TODO1: nodeForwardList: HashMap<String, String> lookup for which real node is used (e.g. when 2 nodes form message + icon)
+		// TODO2: sequence diagram: get Nodes in order
+		
+	
+		// TODO 3: edges
+		
 		return conversation;
 	}
 	

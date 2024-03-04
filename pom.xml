@@ -22,5 +22,10 @@
    		<artifactId>tinkergraph-gremlin</artifactId>
    		<version>3.7.1</version>
 	  </dependency>
+	  <dependency>
+		  <groupId>org.jgrapht</groupId>
+		  <artifactId>jgrapht-core</artifactId>
+  		  <version>1.5.2</version>
+	  </dependency>
   </dependencies>
 </project>

@@ -1,7 +1,16 @@
 package keml.io.graphml;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Iterator;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.commons.io.FilenameUtils;
 
@@ -11,15 +20,9 @@ import keml.KemlPackage;
 import keml.impl.ConversationImpl;
 import keml.util.KemlAdapterFactory;
 
-import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
-import org.apache.tinkerpop.gremlin.structure.Edge;
-import org.apache.tinkerpop.gremlin.structure.Graph;
-import org.apache.tinkerpop.gremlin.structure.Property;
-import org.apache.tinkerpop.gremlin.structure.Vertex;
-import org.apache.tinkerpop.gremlin.structure.VertexProperty;
-import org.apache.tinkerpop.gremlin.structure.io.IoCore;
-import org.apache.tinkerpop.gremlin.structure.io.graphml.GraphMLReader;
-import org.apache.tinkerpop.gremlin.util.Gremlin;
+
+import org.w3c.dom.*;
+import org.xml.sax.SAXException;
 
 
 public class GraphML2KEML {
@@ -27,47 +30,43 @@ public class GraphML2KEML {
 	static KemlFactory factory = KemlFactory.eINSTANCE;
 
 	
-	public Conversation readFromPath (String path) {
+	public Conversation readFromPath (String path) throws ParserConfigurationException, FileNotFoundException, IOException, SAXException {
 		
+		DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+		Document doc;
+		try (FileInputStream is = new FileInputStream(path)) {
+			doc = builder.parse(is);			
+		}
 		
-		Graph graph = TinkerGraph.open();
-		graph.traversal().io(path).read().iterate();
-		System.out.println(graph.toString());
-				
-		
-		
-		
-		
-		return graph2keml(graph, FilenameUtils.getBaseName(path));
+		doc.getDocumentElement().normalize();
+			
+		return graph2keml(doc, FilenameUtils.getBaseName(path));
 		
 	}
 	
-	private Conversation graph2keml(Graph graph, String title) {
+	private Conversation graph2keml(Document doc, String title) {
 		
 		Conversation res = factory.createConversation();
 		res.setTitle(title);
 		
-		for (Iterator<Vertex> iter = graph.vertices(); iter.hasNext(); ) {
-		    Vertex vertex = iter.next();
-		    System.out.println(vertex.toString());
-		    
-			for (Iterator<VertexProperty<Object>> it = vertex.properties(); it.hasNext(); ) {
+		NodeList nodeList = doc.getElementsByTagName("node");
 
-				System.out.println(it.next().toString());
-			}
-		
-		}
-		
-		for (Iterator<Edge> iter = graph.edges(); iter.hasNext(); ) {
-		    Edge edge = iter.next();
-		    System.out.println(edge.label());
-		    
-			for (Iterator<Property<Object>> it = edge.properties(); it.hasNext(); ) {
+		System.out.println(nodeList.getLength());
+		for (int i = 0; i< nodeList.getLength(); i++) {
+			Node node = nodeList.item(i);
+			String id = node.getAttributes().item(0).getNodeValue();
+			
+			NodeList data = node.getChildNodes();
+			System.out.println(id +": "+data.getLength());
 
-				System.out.println(it.next().toString());
+			for (int j = 0; j < data.getLength(); j++) {
+				System.out.println(data.item(j).getNodeName());
 			}
-		
+								
 		}
+
+		
+		
 		
 		return res;
 	}

@@ -17,7 +17,7 @@ public class IOProvider {
 	 * @param args
 	 * @throws IOException 
 	 */
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws Exception {
 
 		String currentPath = new java.io.File(".").getCanonicalPath();
 		System.out.println("Current dir:" + currentPath);

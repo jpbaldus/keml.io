@@ -58,15 +58,12 @@ public class GraphML2KEML {
 		Author author = factory.createAuthor();
 		conversation.setAuthor(author);
 		
-		HashMap<String, Object> kemlNodes = new HashMap();
+		HashMap<String, Object> kemlNodes = new HashMap<String, Object>();
 		
 		//determine execution specs via positions:
-		Float authorXL = 0F;
-		Float authorXR = 0F;
-		
-		HashMap<String, Pair<Float, Float>> conversationPartnerXs = new HashMap<String, Pair<Float, Float>>(); // helper map for all conversation partners
-		
-		HashMap<String, PositionalInformation> messageExecutionXs = new HashMap<String, PositionalInformation>(); // helper map for all possible message executions
+		PositionalInformation authorPosition = null;	
+		HashMap<String, PositionalInformation> conversationPartnerXs = new HashMap<String, PositionalInformation>(); // helper map for all conversation partners' positions	
+		HashMap<String, PositionalInformation> potentialMessageExecutionXs = new HashMap<String, PositionalInformation>(); // helper map for all possible message executions
 
 		
 		
@@ -78,7 +75,6 @@ public class GraphML2KEML {
 			String id = node.getAttributes().item(0).getNodeValue();
 			
 			NodeList data = node.getChildNodes();
-			System.out.println(id +": "+data.getLength());
 
 			for (int j = 0; j < data.getLength(); j++) {
 				Node cur = data.item(j);
@@ -99,10 +95,9 @@ public class GraphML2KEML {
 								String label = readLabel(childNode);
 								if (!label.equals("")) {
 									// this is a life line, determine xleft and xright
-									Pair<Float, Float> x = readXPositions(childNode);
+									PositionalInformation x = readPositions(childNode);
 									if (label.equals("Author")) {
-										authorXL = x.getLeft();
-										authorXR = x.getRight();
+										authorPosition = x;
 									} else {
 										ConversationPartner p = factory.createConversationPartner(); //v4: browser n83, LLM n79
 										p.setName(label);
@@ -133,25 +128,29 @@ public class GraphML2KEML {
 								String color = readColor(childNode);
 								switch (color) {
 									case "#FFFF99": { //light-yellow, used on information by Webbrowser
-										
+										break;
 									}
 									case "#CCFFFF": { // light-blue, used on information by LLM
-										
+										break;
 									}
 									case "#99CC00": { //green, used on facts (!)
 										
+										
+										break;
 									}
 									case "#FFCC00": { // yellow, behind human icon (isInstruction = true)
+										break;
 										
 									}
 									case "#C0C0C0": { //grey, used for message executions
 										//we need this to complete the edges, we will just model the messageSpecs on author explicitly but first put all into the messageExecutionXs
 										// also need y position to order them on the author
 										PositionalInformation xPositions = readPositions(childNode);
-										messageExecutionXs.put(id, xPositions);
+										potentialMessageExecutionXs.put(id, xPositions);
+										break;
 									}
 									default: {
-										
+										throw new IllegalArgumentException("Unrecognized color: "+color);
 									}
 								}
 								
@@ -176,16 +175,9 @@ public class GraphML2KEML {
 							default: {
 								throw new IllegalArgumentException("Unrecognized shape: "+nodeName);
 							}
-						
 						}
-
-					}
-				
-					
+					}		
 					cur.getChildNodes().getLength();
-					
-					//System.out.println(cur.getNodeName());
-					//System.out.println(cur.getAttributes().item(0).getNodeValue());
 				}
 			}
 								
@@ -194,11 +186,11 @@ public class GraphML2KEML {
 		System.out.println(kemlNodes.toString());
 		System.out.println(kemlNodes.size());
 		
-		println(authorXL.toString());
-		println(authorXR.toString());
+		if (authorPosition != null)
+			println(authorPosition.toString());
 		
 		println(conversationPartnerXs.toString());
-		println(messageExecutionXs.toString());
+		println(potentialMessageExecutionXs.toString());
 		
 		return conversation;
 	}
@@ -247,26 +239,7 @@ public class GraphML2KEML {
 		Float yh = yl + Float.parseFloat(height);
 		return new PositionalInformation(xl, xr, yl, yh);
 		
-	}
-	
-	private Pair<Float, Float> readXPositions(Node node) {
-		NodeList children = node.getChildNodes();
-		
-		for (int i=0; i<children.getLength(); i++) {
-			Node childNode = children.item(i);
-			if (childNode.getNodeName().equals("y:Geometry")) {
-				String x = childNode.getAttributes().getNamedItem("x").getNodeValue();
-				Float xl = Float.parseFloat(x);
-				String width = childNode.getAttributes().getNamedItem("width").getNodeValue();
-				Float xr = xl + Float.parseFloat(width);
-				println(xl.toString());
-				println(xr.toString());
-				return new ImmutablePair<>(xl, xr);
-			}			
-		}
-		throw new IllegalArgumentException();
-	}
-	
+	}	
 	
 	private String cleanLabel(String s) {
 		return s.trim().replace('\n', ' ');

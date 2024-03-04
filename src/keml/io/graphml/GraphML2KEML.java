@@ -14,11 +14,15 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 
 import keml.Author;
 import keml.Conversation;
+import keml.ConversationPartner;
 import keml.KemlFactory;
 import keml.KemlPackage;
+import keml.NewInformation;
 import keml.PreKnowledge;
 import keml.impl.ConversationImpl;
 import keml.util.KemlAdapterFactory;
@@ -56,6 +60,15 @@ public class GraphML2KEML {
 		
 		HashMap<String, Object> kemlNodes = new HashMap();
 		
+		//determine execution specs via positions:
+		Float authorXL = 0F;
+		Float authorXR = 0F;
+		
+		HashMap<String, Pair<Float, Float>> conversationPartnerXs = new HashMap<String, Pair<Float, Float>>(); // helper map for all conversation partners
+		
+		HashMap<String, Pair<Float, Float>> messageExecutionXs = new HashMap<String, Pair<Float, Float>>(); // helper map for all possible message executions
+
+		
 		
 		NodeList nodeList = doc.getElementsByTagName("node");
 
@@ -79,6 +92,29 @@ public class GraphML2KEML {
 
 						switch (nodeName) {
 							case "#text": break;
+							case "y:SVGNode": {
+								System.out.println("Found SVG");
+								// these nodes represent the conversation partners and the instruction icons on information
+								// each one with a label forms a new conversation partner (except for Author)
+								String label = readLabel(childNode);
+								if (!label.equals("")) {
+									// this is a life line, determine xleft and xright
+									Pair<Float, Float> x = readXPositions(childNode);
+									if (label.equals("Author")) {
+										authorXL = x.getLeft();
+										authorXR = x.getRight();
+									} else {
+										ConversationPartner p = factory.createConversationPartner(); //v4: browser n83, LLM n79
+										p.setName(label);
+										kemlNodes.put(id,  p);
+										conversationPartnerXs.put(id, x);
+									}
+								} else { //just icons on information (isInstruction = true) and the extra computer on the LLM
+									
+									
+								}								
+								break;
+							}
 							case "y:GenericNode": {
 								System.out.println("Found Generic");
 								// we just need the pre-knowledge from it, that has <y:GenericNode configuration="com.yworks.bpmn.Artifact.withShadow">
@@ -91,12 +127,49 @@ public class GraphML2KEML {
 								}
 								break;
 							}
-							case "y:SVGNode": {
-								System.out.println("Found SVG");
-								break;
-							}
 							case "y:ShapeNode": {
 								System.out.println("Found Shape");
+								// TODO switch by color
+								String color = readColor(childNode);
+								switch (color) {
+									case "#FFFF99": { //light-yellow, used on information by Webbrowser
+										
+									}
+									case "#CCFFFF": { // light-blue, used on information by LLM
+										
+									}
+									case "#99CC00": { //green, used on facts (!)
+										
+									}
+									case "#FFCC00": { // yellow, behind human icon (isInstruction = true)
+										
+									}
+									case "#C0C0C0": { //grey, used for message executions
+										//we need this to complete the edges, we will just model the messageSpecs on author explicitly but first put all into the messageExecutionXs
+										Pair<Float, Float> xPositions = readXPositions(childNode);
+										messageExecutionXs.put(id, xPositions);
+									}
+									default: {
+										
+									}
+								}
+								
+								String label = readLabel(childNode);
+								switch (label) {
+									case null: break;
+									case (""): break;
+									case ("!"): {
+										// this is an addition to an information, meaning it is a fact (isInstruction = false)
+										// TODO link to a new information via position
+										break;
+									}
+									default: {
+										NewInformation info = factory.createNewInformation();
+										info.setMessage(label);
+										kemlNodes.put(id, info);
+										// todo maybe first collect corresponding ! or icon?
+									}
+								}	
 								break;
 							}
 							default: {
@@ -118,6 +191,13 @@ public class GraphML2KEML {
 		}
 		
 		System.out.println(kemlNodes.toString());
+		System.out.println(kemlNodes.size());
+		
+		println(authorXL.toString());
+		println(authorXR.toString());
+		
+		println(conversationPartnerXs.toString());
+		println(messageExecutionXs.toString());
 		
 		return conversation;
 	}
@@ -135,6 +215,39 @@ public class GraphML2KEML {
 			}			
 		}
 		return label;
+	}
+	
+	private String readColor(Node node) {
+		NodeList children = node.getChildNodes();
+		String color = "";
+		
+		for (int i=0; i<children.getLength(); i++) {
+			Node childNode = children.item(i);
+			if (childNode.getNodeName().equals("y:Fill")) {
+				color = childNode.getAttributes().getNamedItem("color").getNodeValue();
+				color = cleanLabel(color);
+				println(color);
+			}			
+		}
+		return color;
+	}
+	
+	private Pair<Float, Float> readXPositions(Node node) {
+		NodeList children = node.getChildNodes();
+		
+		for (int i=0; i<children.getLength(); i++) {
+			Node childNode = children.item(i);
+			if (childNode.getNodeName().equals("y:Geometry")) {
+				String x = childNode.getAttributes().getNamedItem("x").getNodeValue();
+				Float xl = Float.parseFloat(x);
+				String width = childNode.getAttributes().getNamedItem("width").getNodeValue();
+				Float xr = xl + Float.parseFloat(width);
+				println(xl.toString());
+				println(xr.toString());
+				return new ImmutablePair<>(xl, xr);
+			}			
+		}
+		throw new IllegalArgumentException();
 	}
 	
 	

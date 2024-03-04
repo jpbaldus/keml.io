@@ -12,7 +12,9 @@ import keml.impl.ConversationImpl;
 import keml.util.KemlAdapterFactory;
 
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
+import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Graph;
+import org.apache.tinkerpop.gremlin.structure.Property;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.apache.tinkerpop.gremlin.structure.io.IoCore;
@@ -50,6 +52,17 @@ public class GraphML2KEML {
 		    System.out.println(vertex.toString());
 		    
 			for (Iterator<VertexProperty<Object>> it = vertex.properties(); it.hasNext(); ) {
+
+				System.out.println(it.next().toString());
+			}
+		
+		}
+		
+		for (Iterator<Edge> iter = graph.edges(); iter.hasNext(); ) {
+		    Edge edge = iter.next();
+		    System.out.println(edge.label());
+		    
+			for (Iterator<Property<Object>> it = edge.properties(); it.hasNext(); ) {
 
 				System.out.println(it.next().toString());
 			}

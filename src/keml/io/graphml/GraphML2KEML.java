@@ -14,9 +14,11 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.commons.io.FilenameUtils;
 
+import keml.Author;
 import keml.Conversation;
 import keml.KemlFactory;
 import keml.KemlPackage;
+import keml.PreKnowledge;
 import keml.impl.ConversationImpl;
 import keml.util.KemlAdapterFactory;
 
@@ -46,8 +48,10 @@ public class GraphML2KEML {
 	
 	private Conversation graph2keml(Document doc, String title) {
 		
-		Conversation res = factory.createConversation();
-		res.setTitle(title);
+		Conversation conversation = factory.createConversation();
+		conversation.setTitle(title);
+		Author author = factory.createAuthor();
+		conversation.setAuthor(author);
 		
 		NodeList nodeList = doc.getElementsByTagName("node");
 
@@ -60,16 +64,91 @@ public class GraphML2KEML {
 			System.out.println(id +": "+data.getLength());
 
 			for (int j = 0; j < data.getLength(); j++) {
-				System.out.println(data.item(j).getNodeName());
+				Node cur = data.item(j);
+				if (cur.getNodeName().equals("data") && cur.getAttributes().item(0).getNodeValue().equals("d6")) { 
+					//only these data nodes hold the relevant properties
+					// we can now distinguish by shape:
+					NodeList children = cur.getChildNodes();
+					for (int k = 0; k < children.getLength(); k++) {
+						Node childNode = children.item(k);
+						String nodeName = childNode.getNodeName();
+
+						switch (nodeName) {
+							case "#text": break;
+							case "y:GenericNode": {
+								System.out.println("Found Generic");
+								// we just need the pre-knowledge from it, that has <y:GenericNode configuration="com.yworks.bpmn.Artifact.withShadow">
+								if (childNode.getAttributes().item(0).getNodeValue().equals("com.yworks.bpmn.Artifact.withShadow")) {
+									System.out.println("Found preknowledge");
+									PreKnowledge pre = readPreKnowledge(childNode);
+									//author.
+									
+								}
+								break;
+							}
+							case "y:SVGNode": {
+								System.out.println("Found SVG");
+								break;
+							}
+							case "y:ShapeNode": {
+								System.out.println("Found Shape");
+								break;
+							}
+							default: {
+								throw new IllegalArgumentException("Unrecognized shape: "+nodeName);
+							}
+						
+						}
+
+					}
+				
+					
+					cur.getChildNodes().getLength();
+					
+					//System.out.println(cur.getNodeName());
+					//System.out.println(cur.getAttributes().item(0).getNodeValue());
+				}
 			}
 								
 		}
-
 		
 		
-		
-		return res;
+		return conversation;
 	}
 	
+	//called on <y:GenericNode configuration="com.yworks.bpmn.Artifact.withShadow">
+	private PreKnowledge readPreKnowledge(Node node) {
+		
+		NodeList children = node.getChildNodes();
+		String label = "";
+		
+		for (int i=0; i<children.getLength(); i++) {
+			Node childNode = children.item(i);
+			if (childNode.getNodeName().equals("y:NodeLabel") && childNode.getAttributes().getNamedItem("hasText") == null) { //a text exists
+				label = childNode.getChildNodes().item(0).getNodeValue(); //TODO is item 0 guaranteed?
+				label = cleanLabel(label);
+				println(label);
+			}			
+		}	
+		PreKnowledge res = factory.createPreKnowledge();
+		res.setMessage(label);
+		return res;		
+	}
+	
+	private String cleanLabel(String s) {
+		return s.trim().replace('\n', ' ');
+	}
+	
+	private void println(String s) {
+		System.out.println(s);
+	}
+	
+	private void printAttributeNames (Node node) {
+		NamedNodeMap map = node.getAttributes();
+		for (int j =0; j< map.getLength(); j++)
+		{
+			println(map.item(j).getNodeName());
+		}
+	}
 
 }

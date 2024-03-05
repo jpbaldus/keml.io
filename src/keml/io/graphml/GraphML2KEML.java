@@ -8,6 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -174,6 +176,13 @@ public class GraphML2KEML {
 			}								
 		}
 		
+		// nodeForwardList: HashMap<String, String> lookup for which real information node is used (we have 2 nodes form message + icon)
+		Map<String, String> informationNodeForwardMap = createNodeForwardList(informationPositions, informationIsInstructionPositions, informationIsNoInstructionPositions, kemlNodes);
+		
+		// now work on edges to separate them: we need those of the sequence diagram to arrange the messages and can already define all relations between information in a second method
+		
+		
+		
 		System.out.println(kemlNodes.toString());
 		System.out.println(kemlNodes.size());
 		
@@ -191,14 +200,55 @@ public class GraphML2KEML {
 		println("NoInstruction:");
 		println(informationIsNoInstructionPositions.toString());
 		
-		// TODO1: nodeForwardList: HashMap<String, String> lookup for which real node is used (e.g. when 2 nodes form message + icon)
-		// TODO2: sequence diagram: get Nodes in order
+		// TODO 2: edges
+		// TODO 3: sequence diagram: get Nodes in order (In vs out?)
 		
 	
-		// TODO 3: edges
 		
 		return conversation;
 	}
+	
+	// works on the knowledge part of the graph to unite the information (with text) and its type (isInstruction)
+	// also sets the isInstruction flag on the information
+	private Map<String, String> createNodeForwardList(
+			HashMap<String, PositionalInformation> informationPositions,
+			HashMap<String, PositionalInformation> informationIsInstructionPositions,
+			HashMap<String, PositionalInformation> informationIsNoInstructionPositions,
+			HashMap<String, Object> kemlNodes) {
+		
+		if (informationPositions.size() != informationIsInstructionPositions.size() + informationIsNoInstructionPositions.size()) {
+			throw new IllegalArgumentException("Sizes do not match!");
+		}
+		Map<String, String> forwardList = informationPositions.keySet().stream()
+				.collect(Collectors.toMap(s -> s, s -> s));
+			
+		informationPositions.forEach((str, pos)-> {
+			boolean matched = findMatchForMessage(str, pos, informationIsInstructionPositions, true, forwardList, kemlNodes);
+			if (!matched) {
+				boolean nowMatched = findMatchForMessage(str, pos, informationIsNoInstructionPositions, false, forwardList, kemlNodes);
+				if (!nowMatched)
+					throw new IllegalArgumentException("No match for node "+str);
+			}	
+		});
+		return forwardList;
+	}
+	
+	
+	boolean findMatchForMessage(String str, PositionalInformation pos, HashMap<String, PositionalInformation>posToMatch, boolean isInstr, Map<String, String>forwardList, HashMap<String,Object>kemlNodes ) {
+		for (Map.Entry<String, PositionalInformation> e: posToMatch.entrySet()) {
+			//type is on the right, so use right side of information (xr) and left side of isInstruction (xl) to match, also both heights (y)
+			if ( floatEquality( e.getValue().getxLeft(), pos.getxRight() ) 
+					&& floatEquality (e.getValue().getyLow(), pos.getyLow() )
+					&& floatEquality (e.getValue().getyHigh(), pos.getyHigh()) ) {
+				forwardList.put(e.getKey(), str);
+				NewInformation info = (NewInformation) kemlNodes.get(str);
+				info.setIsInstruction(isInstr);
+				return true;
+			}
+		}
+		return false;		
+	}
+	
 	
 	private String readLabel(Node node) {
 		String label = "";
@@ -209,7 +259,6 @@ public class GraphML2KEML {
 			if (childNode.getAttributes().getNamedItem("hasText") == null) {//a text exists
 				label = childNode.getChildNodes().item(0).getNodeValue(); //TODO is item 0 guaranteed?
 				label = cleanLabel(label);
-				println(label);
 			}
 		}
 		return label;
@@ -234,9 +283,12 @@ public class GraphML2KEML {
 		Float yl = Float.parseFloat(y);
 		String height = geo.getNamedItem("height").getNodeValue();
 		Float yh = yl + Float.parseFloat(height);
-		return new PositionalInformation(xl, xr, yl, yh);
-		
+		return new PositionalInformation(xl, xr, yl, yh);	
 	}	
+	
+	private boolean floatEquality(Float f1, Float f2) {
+		return Math.abs(f1-f2) < 0.001F;
+	}
 	
 	private String cleanLabel(String s) {
 		return s.trim().replace('\n', ' ');

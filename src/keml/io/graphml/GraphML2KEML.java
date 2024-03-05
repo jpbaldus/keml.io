@@ -6,10 +6,14 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -62,7 +66,7 @@ public class GraphML2KEML {
 		
 		HashMap<String, Object> kemlNodes = new HashMap<String, Object>();
 		
-		//determine execution specs via positions:
+		//helper information: determine execution specs via positions, also group nodes and hence edges
 		PositionalInformation authorPosition = null;	
 		HashMap<String, PositionalInformation> conversationPartnerXs = new HashMap<String, PositionalInformation>(); // helper map for all conversation partners' positions	
 		HashMap<String, PositionalInformation> potentialMessageExecutionXs = new HashMap<String, PositionalInformation>(); // helper map for all possible message executions
@@ -73,9 +77,10 @@ public class GraphML2KEML {
 		
 		HashMap<String, String> ignoreNodes = new HashMap<String, String>();
 		
+		
+		// first work on nodes, fill the lists above:
 		NodeList nodeList = doc.getElementsByTagName("node");
 
-		System.out.println(nodeList.getLength());
 		for (int i = 0; i< nodeList.getLength(); i++) {
 			Node node = nodeList.item(i);
 			String id = node.getAttributes().item(0).getNodeValue();
@@ -95,7 +100,6 @@ public class GraphML2KEML {
 						switch (nodeName) {
 							case "#text": break;
 							case "y:SVGNode": {
-								System.out.println("Found SVG");
 								// these nodes represent the conversation partners and the instruction icons on information
 								// each one with a label forms a new conversation partner (except for Author)
 								String label = readLabel(childNode);
@@ -117,7 +121,6 @@ public class GraphML2KEML {
 								break;
 							}
 							case "y:GenericNode": {
-								System.out.println("Found Generic");
 								// we just need the pre-knowledge from it, that has <y:GenericNode configuration="com.yworks.bpmn.Artifact.withShadow">
 								if (childNode.getAttributes().item(0).getNodeValue().equals("com.yworks.bpmn.Artifact.withShadow")) {
 									System.out.println("Found preknowledge");
@@ -129,8 +132,6 @@ public class GraphML2KEML {
 								break;
 							}
 							case "y:ShapeNode": {
-								System.out.println("Found Shape");
-								// TODO switch by color
 								String color = readColor(childNode);
 								PositionalInformation pos = readPositions(childNode);
 
@@ -179,9 +180,27 @@ public class GraphML2KEML {
 		// nodeForwardList: HashMap<String, String> lookup for which real information node is used (we have 2 nodes form message + icon)
 		Map<String, String> informationNodeForwardMap = createNodeForwardList(informationPositions, informationIsInstructionPositions, informationIsNoInstructionPositions, kemlNodes);
 		
+		// ************* edges ****************************
+		NodeList edgeList = doc.getElementsByTagName("edge");
+		List<GraphEdge> edges = IntStream.range(0, edgeList.getLength())
+			    .mapToObj(edgeList::item)
+			    .map(s -> parseGraphEdge(s))
+			    .collect(Collectors.toList());
+		
+		System.out.println(edges);
 		// now work on edges to separate them: we need those of the sequence diagram to arrange the messages and can already define all relations between information in a second method
-		
-		
+		List<GraphEdge> sequenceDiagram = new ArrayList<GraphEdge>();
+		List<GraphEdge> informationConnection = new ArrayList<GraphEdge>();
+		List<GraphEdge> information2Message = new ArrayList<GraphEdge>();
+		edges.forEach(e -> {
+			if (potentialMessageExecutionXs.containsKey(e.getSource())) {
+				if (potentialMessageExecutionXs.containsKey(e.getTarget())) {
+					sequenceDiagram.add(e);
+				} //else if()
+
+				
+			}
+		});
 		
 		System.out.println(kemlNodes.toString());
 		System.out.println(kemlNodes.size());
@@ -200,12 +219,32 @@ public class GraphML2KEML {
 		println("NoInstruction:");
 		println(informationIsNoInstructionPositions.toString());
 		
-		// TODO 2: edges
 		// TODO 3: sequence diagram: get Nodes in order (In vs out?)
 		
-	
+		System.out.println("Read "+ nodeList.getLength() + " nodes and " + edgeList.getLength() + " edges.");
+
 		
 		return conversation;
+	}
+	
+	private GraphEdge parseGraphEdge(Node edge) {
+		Element e = (Element) edge;
+		String id = e.getAttributes().getNamedItem("id").getNodeValue();
+		String source = e.getAttributes().getNamedItem("source").getNodeValue();
+		String target = e.getAttributes().getNamedItem("target").getNodeValue();
+		
+		// TODO parse label
+		String label = "";
+		NodeList labels = e.getElementsByTagName("y:EdgeLabel");
+		for (int i=0; i<labels.getLength(); i++) {
+			Node childNode = labels.item(i);
+			if (childNode.getAttributes().getNamedItem("hasText") == null) {//a text exists
+				label = childNode.getChildNodes().item(0).getNodeValue(); //TODO is item 0 guaranteed?
+				label = cleanLabel(label);
+			}
+		}
+		
+		return new GraphEdge(id, source, target, label);
 	}
 	
 	// works on the knowledge part of the graph to unite the information (with text) and its type (isInstruction)
@@ -263,6 +302,8 @@ public class GraphML2KEML {
 		}
 		return label;
 	}
+	
+	
 	
 	private String readColor(Node node) {
 		Element e = (Element) node;

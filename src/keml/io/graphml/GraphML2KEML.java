@@ -65,6 +65,7 @@ public class GraphML2KEML {
 		conversation.setAuthor(author);
 		
 		HashMap<String, Object> kemlNodes = new HashMap<String, Object>();
+		HashMap<String, NodeType> nodeTypes = new HashMap<String, NodeType>();
 		
 		//helper information: determine execution specs via positions, also group nodes and hence edges
 		PositionalInformation authorPosition = null;	
@@ -83,7 +84,8 @@ public class GraphML2KEML {
 
 		for (int i = 0; i< nodeList.getLength(); i++) {
 			Node node = nodeList.item(i);
-			String id = node.getAttributes().item(0).getNodeValue();
+			String id = node.getAttributes().getNamedItem("id").getNodeValue();
+
 			
 			NodeList data = node.getChildNodes();
 
@@ -107,8 +109,10 @@ public class GraphML2KEML {
 									// this is a life line, determine Position
 									PositionalInformation x = readPositions(childNode);
 									if (label.equals("Author")) {
+										nodeTypes.put(id, NodeType.AUTHOR);
 										authorPosition = x;
 									} else {
+										nodeTypes.put(id, NodeType.CONVERSATION_PARTNER);										
 										ConversationPartner p = factory.createConversationPartner(); //v4: browser n83, LLM n79
 										p.setName(label);
 										kemlNodes.put(id,  p);
@@ -123,7 +127,7 @@ public class GraphML2KEML {
 							case "y:GenericNode": {
 								// we just need the pre-knowledge from it, that has <y:GenericNode configuration="com.yworks.bpmn.Artifact.withShadow">
 								if (childNode.getAttributes().item(0).getNodeValue().equals("com.yworks.bpmn.Artifact.withShadow")) {
-									System.out.println("Found preknowledge");
+									nodeTypes.put(id, NodeType.PRE_KNOWLEDGE);
 									String label = readLabel(childNode);
 									PreKnowledge pre = 	factory.createPreKnowledge();
 									pre.setMessage(label);
@@ -139,6 +143,7 @@ public class GraphML2KEML {
 									case "#FFFF99":  //light-yellow, used on information by WebBrowser
 									case "#CCFFFF": { // light-blue, used on information by LLM
 										String label = readLabel(childNode);
+										nodeTypes.put(id, NodeType.NEW_INFORMATION);
 										NewInformation info = factory.createNewInformation();
 										info.setMessage(label);
 										kemlNodes.put(id, info);
@@ -147,10 +152,12 @@ public class GraphML2KEML {
 										break;
 									}
 									case "#99CC00": { //green, used on facts (!)
+										nodeTypes.put(id, NodeType.NEW_INFORMATION);
 										informationIsNoInstructionPositions.put(id, pos);								
 										break;
 									}
 									case "#FFCC00": { // yellow, behind human icon (isInstruction = true)
+										nodeTypes.put(id, NodeType.NEW_INFORMATION);
 										informationIsInstructionPositions.put(id, pos);								
 										break;
 										
@@ -158,6 +165,7 @@ public class GraphML2KEML {
 									case "#C0C0C0": { //grey, used for message executions
 										//we need this to complete the edges, we will just model the messageSpecs on author explicitly but first put all into the messageExecutionXs
 										// also need y position to order them on the author
+										nodeTypes.put(id, NodeType.MESSAGE_SPEC);
 										potentialMessageExecutionXs.put(id, pos);
 										break;
 									}
@@ -172,7 +180,6 @@ public class GraphML2KEML {
 							}
 						}
 					}		
-					cur.getChildNodes().getLength();
 				}
 			}								
 		}
@@ -187,20 +194,71 @@ public class GraphML2KEML {
 			    .map(s -> parseGraphEdge(s))
 			    .collect(Collectors.toList());
 		
-		System.out.println(edges);
 		// now work on edges to separate them: we need those of the sequence diagram to arrange the messages and can already define all relations between information in a second method
 		List<GraphEdge> sequenceDiagram = new ArrayList<GraphEdge>();
 		List<GraphEdge> informationConnection = new ArrayList<GraphEdge>();
-		List<GraphEdge> information2Message = new ArrayList<GraphEdge>();
-		edges.forEach(e -> {
-			if (potentialMessageExecutionXs.containsKey(e.getSource())) {
-				if (potentialMessageExecutionXs.containsKey(e.getTarget())) {
-					sequenceDiagram.add(e);
-				} //else if()
-
-				
+		List<GraphEdge> usedBy = new ArrayList<GraphEdge>();
+		List<GraphEdge> generates = new ArrayList<GraphEdge>();
+		edges.forEach(e -> 
+		{
+			NodeType src = nodeTypes.get(e.getSource());
+			switch (src) {
+				case MESSAGE_SPEC: {
+					switch(nodeTypes.get(e.getTarget())) {
+						case MESSAGE_SPEC: {
+							sequenceDiagram.add(e);
+							break;
+						}
+						case NEW_INFORMATION: {
+							generates.add(e);
+							break;
+						}
+						default: {
+							throw new IllegalArgumentException("Node "+ e.getTarget() + " of type " + nodeTypes.get(e.getTarget()) + " not valid on edge from " +src);
+						}
+					}
+					break;
+				}
+				case AUTHOR: case CONVERSATION_PARTNER: {
+					if (nodeTypes.get(e.getTarget()) == NodeType.MESSAGE_SPEC) {
+						sequenceDiagram.add(e);
+					} else {
+						throw new IllegalArgumentException("Node "+ e.getTarget() + " of type " + nodeTypes.get(e.getTarget()) + " not valid on edge from "+src);
+					}
+					break;
+				}
+				case NEW_INFORMATION: {
+					switch(nodeTypes.get(e.getTarget())) {
+						case MESSAGE_SPEC: {
+							usedBy.add(e);
+							break;
+						}
+						case NEW_INFORMATION: {
+							informationConnection.add(e);
+							break;
+						}
+						default: {
+							throw new IllegalArgumentException("Node "+ e.getTarget() + " of type " + nodeTypes.get(e.getTarget()) + " not valid on edge from " +src);
+						}
+					}
+					break;
+					
+				}
+				case PRE_KNOWLEDGE: {
+					if (nodeTypes.get(e.getTarget()) == NodeType.MESSAGE_SPEC) {
+						usedBy.add(e);
+					} else {
+						throw new IllegalArgumentException("Node "+ e.getTarget() + " of type " + nodeTypes.get(e.getTarget()) + " not valid on edge from "+src);
+					}
+					break;
+				}
 			}
 		});
+		
+		System.out.println(sequenceDiagram);
+		System.out.println(usedBy);		
+		System.out.println(generates);
+		System.out.println(informationConnection);
 		
 		System.out.println(kemlNodes.toString());
 		System.out.println(kemlNodes.size());
@@ -232,17 +290,7 @@ public class GraphML2KEML {
 		String id = e.getAttributes().getNamedItem("id").getNodeValue();
 		String source = e.getAttributes().getNamedItem("source").getNodeValue();
 		String target = e.getAttributes().getNamedItem("target").getNodeValue();
-		
-		// TODO parse label
-		String label = "";
-		NodeList labels = e.getElementsByTagName("y:EdgeLabel");
-		for (int i=0; i<labels.getLength(); i++) {
-			Node childNode = labels.item(i);
-			if (childNode.getAttributes().getNamedItem("hasText") == null) {//a text exists
-				label = childNode.getChildNodes().item(0).getNodeValue(); //TODO is item 0 guaranteed?
-				label = cleanLabel(label);
-			}
-		}
+		String label = readLabel(e, "y:EdgeLabel");
 		
 		return new GraphEdge(id, source, target, label);
 	}
@@ -290,9 +338,13 @@ public class GraphML2KEML {
 	
 	
 	private String readLabel(Node node) {
-		String label = "";
 		Element e = (Element) node;
-		NodeList nodeLabels = e.getElementsByTagName("y:NodeLabel");
+		return readLabel(e, "y:NodeLabel");
+	}
+	
+	private String readLabel(Element e, String elementName) {
+		String label = "";
+		NodeList nodeLabels = e.getElementsByTagName(elementName);
 		for (int i=0; i<nodeLabels.getLength(); i++) {
 			Node childNode = nodeLabels.item(i);
 			if (childNode.getAttributes().getNamedItem("hasText") == null) {//a text exists
@@ -302,8 +354,6 @@ public class GraphML2KEML {
 		}
 		return label;
 	}
-	
-	
 	
 	private String readColor(Node node) {
 		Element e = (Element) node;

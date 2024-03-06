@@ -28,6 +28,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import keml.Author;
 import keml.Conversation;
 import keml.ConversationPartner;
+import keml.Information;
 import keml.KemlFactory;
 import keml.KemlPackage;
 import keml.MessageExecution;
@@ -263,7 +264,32 @@ public class GraphML2KEML {
 		});
 		
 		// ***************** Sequence Diagram ********************************
-		buildSequenceDiagram(conversation, authorPosition, conversationPartnerXs, kemlNodes, potentialMessageExecutionXs, sequenceDiagramEdges);
+		ArrayList<String> msgsInOrder = buildSequenceDiagram(conversation, authorPosition, conversationPartnerXs, kemlNodes, potentialMessageExecutionXs, sequenceDiagramEdges);
+		
+		// ***************** Connecting information and sequence diagram ********
+		
+		// TODO maybe more verbose read?
+		// 			MessageExecution m = (MessageExecution) kemlNodes.get(e.getTarget()); to be able to print it on log msg
+		generates.forEach(e -> {
+			ReceiveMessage msg = (ReceiveMessage) kemlNodes.get(e.getSource());
+			NewInformation info = (NewInformation) kemlNodes.get(informationNodeForwardMap.get(e.getTarget()));
+			msg.getGenerates().add(info);
+		});
+		
+		usedBy.forEach(e -> {
+			System.out.println(e);
+			Information info = (Information) kemlNodes.get(e.getSource());
+			//todo does not work on preknowledge
+			
+			if (info == null) { // info is neither preknowledge, nor the real node -> need to follow helper map (it does not contain pre-knowledge)
+				info = (Information) kemlNodes.get(informationNodeForwardMap.get(e.getSource()));			
+			}
+			SendMessage msg = (SendMessage) kemlNodes.get(e.getTarget());
+			info.getIsUsedOn().add(msg);
+		});
+		
+		// ***************** Information Connections **********************
+		// TODO needs to be re-worked on diagram
 		
 		
 		
@@ -279,16 +305,7 @@ public class GraphML2KEML {
 			println(authorPosition.toString());
 		
 		println(conversationPartnerXs.toString());
-		println(potentialMessageExecutionXs.toString());
-		
-		println(ignoreNodes.toString());
-		println("Infos:");
-		println(informationPositions.toString());
-		println("IsInstruction:");
-		println(informationIsInstructionPositions.toString());
-		println("NoInstruction:");
-		println(informationIsNoInstructionPositions.toString());
-		
+		println(potentialMessageExecutionXs.toString());	
 		
 		System.out.println("Read "+ nodeList.getLength() + " nodes and " + edgeList.getLength() + " edges.");
 
@@ -305,7 +322,7 @@ public class GraphML2KEML {
 		});
 	}
 	
-	private void buildSequenceDiagram(Conversation conversation, PositionalInformation authorPosition,
+	private ArrayList<String> buildSequenceDiagram(Conversation conversation, PositionalInformation authorPosition,
 			HashMap<String, PositionalInformation> conversationPartnerXs,
 			HashMap<String, Object> kemlNodes, HashMap<String, PositionalInformation> potentialMessageExecutionXs,
 			List<GraphEdge> edges) {
@@ -377,7 +394,7 @@ public class GraphML2KEML {
 		//now finally insert all messages in order
 		author.getMessageExecutions().addAll(Arrays.asList(msgs));
 		
-		// TODO is this in order?
+		return authorMessagesInOrder;
 	}
 	
 	private boolean isOnLifeLine(PositionalInformation pos, PositionalInformation lifeLinePos) {

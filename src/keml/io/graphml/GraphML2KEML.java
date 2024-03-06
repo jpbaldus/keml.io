@@ -28,6 +28,7 @@ import keml.Conversation;
 import keml.ConversationPartner;
 import keml.KemlFactory;
 import keml.KemlPackage;
+import keml.MessageExecution;
 import keml.NewInformation;
 import keml.PreKnowledge;
 import keml.impl.ConversationImpl;
@@ -195,7 +196,7 @@ public class GraphML2KEML {
 			    .collect(Collectors.toList());
 		
 		// now work on edges to separate them: we need those of the sequence diagram to arrange the messages and can already define all relations between information in a second method
-		List<GraphEdge> sequenceDiagram = new ArrayList<GraphEdge>();
+		List<GraphEdge> sequenceDiagramEdges = new ArrayList<GraphEdge>();
 		List<GraphEdge> informationConnection = new ArrayList<GraphEdge>();
 		List<GraphEdge> usedBy = new ArrayList<GraphEdge>();
 		List<GraphEdge> generates = new ArrayList<GraphEdge>();
@@ -206,7 +207,7 @@ public class GraphML2KEML {
 				case MESSAGE_SPEC: {
 					switch(nodeTypes.get(e.getTarget())) {
 						case MESSAGE_SPEC: {
-							sequenceDiagram.add(e);
+							sequenceDiagramEdges.add(e);
 							break;
 						}
 						case NEW_INFORMATION: {
@@ -221,7 +222,7 @@ public class GraphML2KEML {
 				}
 				case AUTHOR: case CONVERSATION_PARTNER: {
 					if (nodeTypes.get(e.getTarget()) == NodeType.MESSAGE_SPEC) {
-						sequenceDiagram.add(e);
+						sequenceDiagramEdges.add(e);
 					} else {
 						throw new IllegalArgumentException("Node "+ e.getTarget() + " of type " + nodeTypes.get(e.getTarget()) + " not valid on edge from "+src);
 					}
@@ -255,7 +256,12 @@ public class GraphML2KEML {
 			}
 		});
 		
-		System.out.println(sequenceDiagram);
+		// ***************** Sequence Diagram ********************************
+		buildSequenceDiagram(author, authorPosition, conversationPartnerXs, kemlNodes, potentialMessageExecutionXs, sequenceDiagramEdges);
+		
+		
+		
+		System.out.println(sequenceDiagramEdges);
 		System.out.println(usedBy);		
 		System.out.println(generates);
 		System.out.println(informationConnection);
@@ -277,12 +283,31 @@ public class GraphML2KEML {
 		println("NoInstruction:");
 		println(informationIsNoInstructionPositions.toString());
 		
-		// TODO 3: sequence diagram: get Nodes in order (In vs out?)
 		
 		System.out.println("Read "+ nodeList.getLength() + " nodes and " + edgeList.getLength() + " edges.");
 
 		
 		return conversation;
+	}
+	
+	private void buildSequenceDiagram(Author author, PositionalInformation authorPosition,
+			HashMap<String, PositionalInformation> conversationPartnerXs,
+			HashMap<String, Object> kemlNodes, HashMap<String, PositionalInformation> potentialMessageExecutionXs,
+			List<GraphEdge> edges) {
+		
+		// just work by position: all message Specs should be below their LifeLine in order
+		List<String> authorMessagesInOrder = potentialMessageExecutionXs.entrySet().stream()
+				.filter(s -> isOnLifeLine(s.getValue(), authorPosition)) // only those on author
+				.sorted((s,t) -> Float.compare(s.getValue().getyHigh(),t.getValue().getyHigh()))
+				.map(Map.Entry::getKey)
+				.toList();
+		
+		System.out.println(authorMessagesInOrder);
+		
+	}
+	
+	private boolean isOnLifeLine(PositionalInformation pos, PositionalInformation lifeLinePos) {
+		return ( lifeLinePos.getxLeft() - pos.getxLeft() < 0 && lifeLinePos.getxRight() - pos.getxRight() >0);
 	}
 	
 	private GraphEdge parseGraphEdge(Node edge) {

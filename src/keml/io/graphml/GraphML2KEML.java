@@ -7,11 +7,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -31,6 +33,8 @@ import keml.KemlPackage;
 import keml.MessageExecution;
 import keml.NewInformation;
 import keml.PreKnowledge;
+import keml.ReceiveMessage;
+import keml.SendMessage;
 import keml.impl.ConversationImpl;
 import keml.util.KemlAdapterFactory;
 
@@ -114,7 +118,7 @@ public class GraphML2KEML {
 										authorPosition = x;
 									} else {
 										nodeTypes.put(id, NodeType.CONVERSATION_PARTNER);										
-										ConversationPartner p = factory.createConversationPartner(); //v4: browser n83, LLM n79
+										ConversationPartner p = factory.createConversationPartner();
 										p.setName(label);
 										kemlNodes.put(id,  p);
 										conversationPartnerXs.put(id, x);
@@ -188,6 +192,8 @@ public class GraphML2KEML {
 		// nodeForwardList: HashMap<String, String> lookup for which real information node is used (we have 2 nodes form message + icon)
 		Map<String, String> informationNodeForwardMap = createNodeForwardList(informationPositions, informationIsInstructionPositions, informationIsNoInstructionPositions, kemlNodes);
 		
+		
+		
 		// ************* edges ****************************
 		NodeList edgeList = doc.getElementsByTagName("edge");
 		List<GraphEdge> edges = IntStream.range(0, edgeList.getLength())
@@ -257,7 +263,7 @@ public class GraphML2KEML {
 		});
 		
 		// ***************** Sequence Diagram ********************************
-		buildSequenceDiagram(author, authorPosition, conversationPartnerXs, kemlNodes, potentialMessageExecutionXs, sequenceDiagramEdges);
+		buildSequenceDiagram(conversation, authorPosition, conversationPartnerXs, kemlNodes, potentialMessageExecutionXs, sequenceDiagramEdges);
 		
 		
 		
@@ -290,24 +296,92 @@ public class GraphML2KEML {
 		return conversation;
 	}
 	
-	private void buildSequenceDiagram(Author author, PositionalInformation authorPosition,
+	private void addOrderedConversationPartners(Conversation conversation, HashMap<String, PositionalInformation> conversationPartnerXs,
+			HashMap<String, Object> kemlNodes) {
+		conversationPartnerXs.entrySet().stream()
+		.sorted((s,t) -> Float.compare(s.getValue().getxLeft(),t.getValue().getxLeft()))
+		.forEach(c -> {
+			conversation.getConversationPartners().add((ConversationPartner) kemlNodes.get(c.getKey()));
+		});
+	}
+	
+	private void buildSequenceDiagram(Conversation conversation, PositionalInformation authorPosition,
 			HashMap<String, PositionalInformation> conversationPartnerXs,
 			HashMap<String, Object> kemlNodes, HashMap<String, PositionalInformation> potentialMessageExecutionXs,
 			List<GraphEdge> edges) {
 		
+		addOrderedConversationPartners(conversation, conversationPartnerXs, kemlNodes);
+		
+		Author author = conversation.getAuthor();
 		// just work by position: all message Specs should be below their LifeLine in order
-		List<String> authorMessagesInOrder = potentialMessageExecutionXs.entrySet().stream()
-				.filter(s -> isOnLifeLine(s.getValue(), authorPosition)) // only those on author
+		ArrayList<String> authorMessagesInOrder = potentialMessageExecutionXs.entrySet().stream()
+				.filter(s -> isOnLifeLine(s.getValue(), authorPosition))
 				.sorted((s,t) -> Float.compare(s.getValue().getyHigh(),t.getValue().getyHigh()))
 				.map(Map.Entry::getKey)
-				.toList();
+				.collect(Collectors 
+                        .toCollection(ArrayList::new));
+				
+		// for all other lifelines create a map of node id to lifeline id 
+		// TODO current code uses filter and is terribly inefficient if we ever have many conversation partners
+		HashMap<String, String> lifeLineFinder = new HashMap<String, String>();
+		conversationPartnerXs.entrySet().stream().forEach(partner -> {
+			potentialMessageExecutionXs.entrySet().stream()
+			.filter(s -> isOnLifeLine(s.getValue(), partner.getValue()))
+			.forEach(v -> {
+				lifeLineFinder.put(v.getKey(), partner.getKey());	
+			});
+		});
 		
-		System.out.println(authorMessagesInOrder);
+		//now find messages (edges) that connect the author with another lifeline
+		// we can first eliminate all that have no label to improve efficiency
+		edges.removeIf(s -> s.getLabel().isEmpty());
 		
+		MessageExecution[] msgs = new MessageExecution[authorMessagesInOrder.size()];
+
+		edges.forEach(e -> {
+			OptionalInt srcIndexOnAuth = IntStream.range(0, authorMessagesInOrder.size())
+					   .filter(i -> authorMessagesInOrder.get(i).equals(e.getSource()))
+					   .findFirst();
+			if (srcIndexOnAuth.isPresent()) {
+				int index = srcIndexOnAuth.getAsInt();
+				String partnerId = lifeLineFinder.get(e.getTarget());
+				if (partnerId != null) {
+					//create a send message execution spec
+					SendMessage msg = factory.createSendMessage();
+					msg.setContent(e.getLabel());
+					msg.setYPosition(index);
+					msg.setCounterPart((ConversationPartner) kemlNodes.get(partnerId));
+					kemlNodes.put(authorMessagesInOrder.get(index), msg);
+					msgs[index] = msg;
+				}
+			} else {
+				OptionalInt targetIndexOnAuth = IntStream.range(0, authorMessagesInOrder.size())
+						   .filter(i -> authorMessagesInOrder.get(i).equals(e.getTarget()))
+						   .findFirst();
+				if (targetIndexOnAuth.isPresent()) {
+					int index = targetIndexOnAuth.getAsInt();
+					String partnerId = lifeLineFinder.get(e.getSource());
+					if (partnerId != null) {
+						//create a receive message execution spec
+						ReceiveMessage msg = factory.createReceiveMessage();
+						msg.setContent(e.getLabel());
+						msg.setYPosition(index);
+						msg.setCounterPart((ConversationPartner) kemlNodes.get(partnerId));
+						kemlNodes.put(authorMessagesInOrder.get(index), msg);
+						msgs[index] = msg;
+					}
+				}
+				
+			}
+		});
+		//now finally insert all messages in order
+		author.getMessageExecutions().addAll(Arrays.asList(msgs));
+		
+		// TODO is this in order?
 	}
 	
 	private boolean isOnLifeLine(PositionalInformation pos, PositionalInformation lifeLinePos) {
-		return ( lifeLinePos.getxLeft() - pos.getxLeft() < 0 && lifeLinePos.getxRight() - pos.getxRight() >0);
+		return ( lifeLinePos.getxLeft() - pos.getxLeft() <= 0 && lifeLinePos.getxRight() - pos.getxRight() >=0);
 	}
 	
 	private GraphEdge parseGraphEdge(Node edge) {

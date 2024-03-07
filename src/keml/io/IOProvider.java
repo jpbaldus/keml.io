@@ -5,6 +5,8 @@ package keml.io;
 
 import java.io.IOException;
 
+import org.apache.commons.io.FilenameUtils;
+
 import keml.Conversation;
 import keml.io.graphml.GraphML2KEML;
 
@@ -19,12 +21,12 @@ public class IOProvider {
 	 * @throws IOException 
 	 */
 	public static void main(String[] args) throws Exception {
+		
+		String graphmlPath = "../../graphs/objective3-2-2v4.graphml";
+		String kemlPath = FilenameUtils.removeExtension(graphmlPath) + ".keml";
 
-		String currentPath = new java.io.File(".").getCanonicalPath();
-		System.out.println("Current dir:" + currentPath);
-		GraphML2KEML graphml2keml = new GraphML2KEML();
-		Conversation conv = graphml2keml.readFromPath("../../graphs/objective3-2-2v4.graphml");
-		new KemlFileHandler().saveKeml(conv, "../../graphs/objective3-2-2v4.keml");	
+		Conversation conv = new GraphML2KEML().readFromPath(graphmlPath);
+		new KemlFileHandler().saveKeml(conv, kemlPath);	
 	}
 
 }

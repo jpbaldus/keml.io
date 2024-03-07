@@ -6,22 +6,17 @@ import org.w3c.dom.Node;
 
 public class PositionalInformation {
 	
-	//public String id = null;
-	
 	private Float xLeft = null;
 	private Float xRight = null;
 	private Float yLow = null;
 	private Float yHigh = null;
-	
-	
-	
+
 	public PositionalInformation(Float xLeft, Float xRight, Float yLow, Float yHigh) {
 		this.xLeft = xLeft;
 		this.xRight = xRight;
 		this.yLow = yLow;
 		this.yHigh = yHigh;
-	}
-	
+	}	
 	
 	public PositionalInformation (Node node) {
 		Element e = (Element) node;
@@ -42,8 +37,12 @@ public class PositionalInformation {
 				&& floatEquality (yHigh, pos.getyHigh());
 	}
 	
-	public static boolean floatEquality(Float f1, Float f2) {
-		return Math.abs(f1-f2) < 0.001F;
+	public static boolean isOnLifeLine(PositionalInformation pos, PositionalInformation lifeLinePos) {
+		return ( lifeLinePos.getxLeft() - pos.getxLeft() <= 0 && lifeLinePos.getxRight() - pos.getxRight() >=0);
+	}
+	
+	public boolean isOnLine(PositionalInformation lifeLinePos) {
+		return ( lifeLinePos.getxLeft() - xLeft <= 0 && lifeLinePos.getxRight() - xRight >=0);
 	}
 	
 	@Override
@@ -77,5 +76,7 @@ public class PositionalInformation {
 		this.yHigh = yHigh;
 	}
 
-	
+	private static boolean floatEquality(Float f1, Float f2) {
+		return Math.abs(f1-f2) < 0.001F;
+	}
 }

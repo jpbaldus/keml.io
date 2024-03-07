@@ -22,7 +22,6 @@ import keml.Author;
 import keml.Conversation;
 import keml.ConversationPartner;
 import keml.Information;
-import keml.InformationLinkType;
 import keml.KemlFactory;
 import keml.MessageExecution;
 import keml.NewInformation;
@@ -104,7 +103,7 @@ public class GraphML2KEML {
 								String label = GraphMLUtils.readLabel(childNode);
 								if (!label.equals("")) {
 									// this is a life line, determine Position
-									PositionalInformation x = readPositions(childNode);
+									PositionalInformation x = new PositionalInformation(childNode);
 									if (label.equals("Author")) {
 										nodeTypes.put(id, NodeType.AUTHOR);
 										authorPosition = x;
@@ -135,7 +134,7 @@ public class GraphML2KEML {
 							}
 							case "y:ShapeNode": {
 								String color = GraphMLUtils.readColor(childNode);
-								PositionalInformation pos = readPositions(childNode);
+								PositionalInformation pos = new PositionalInformation(childNode);
 
 								switch (color) {
 									case "#FFFF99":  //light-yellow, used on information by WebBrowser
@@ -279,19 +278,11 @@ public class GraphML2KEML {
 		
 		// ***************** Information Connections **********************
 		// TODO needs to be re-worked on diagram
-		
-		
-		
-		System.out.println(sequenceDiagramEdges);
-		System.out.println(usedBy);		
-		System.out.println(generates);
 		System.out.println(informationConnection);
 		
-		System.out.println(kemlNodes.toString());
-		System.out.println(kemlNodes.size());	
-	
+		System.out.println(kemlNodes.toString());	
 		
-		System.out.println("Read "+ nodeList.getLength() + " nodes and " + edgeList.getLength() + " edges.");
+		System.out.println("Read "+ nodeList.getLength() + " nodes and " + edgeList.getLength() + " edges into a conversation with " + kemlNodes.size() + " KEML elements.");
 
 		
 		return conversation;
@@ -316,7 +307,7 @@ public class GraphML2KEML {
 		Author author = conversation.getAuthor();
 		// just work by position: all message Specs should be below their LifeLine in order
 		ArrayList<String> authorMessagesInOrder = potentialMessageExecutionXs.entrySet().stream()
-				.filter(s -> isOnLifeLine(s.getValue(), authorPosition))
+				.filter(s -> s.getValue().isOnLine(authorPosition))
 				.sorted((s,t) -> Float.compare(s.getValue().getyHigh(),t.getValue().getyHigh()))
 				.map(Map.Entry::getKey)
 				.collect(Collectors 
@@ -327,7 +318,7 @@ public class GraphML2KEML {
 		HashMap<String, String> lifeLineFinder = new HashMap<String, String>();
 		conversationPartnerXs.entrySet().stream().forEach(partner -> {
 			potentialMessageExecutionXs.entrySet().stream()
-			.filter(s -> isOnLifeLine(s.getValue(), partner.getValue()))
+			.filter(s -> s.getValue().isOnLine(partner.getValue()))
 			.forEach(v -> {
 				lifeLineFinder.put(v.getKey(), partner.getKey());	
 			});
@@ -380,10 +371,6 @@ public class GraphML2KEML {
 		
 		return authorMessagesInOrder;
 	}
-	
-	private boolean isOnLifeLine(PositionalInformation pos, PositionalInformation lifeLinePos) {
-		return ( lifeLinePos.getxLeft() - pos.getxLeft() <= 0 && lifeLinePos.getxRight() - pos.getxRight() >=0);
-	}
 		
 	// works on the knowledge part of the graph to unite the information (with text) and its type (isInstruction)
 	// also sets the isInstruction flag on the information
@@ -421,10 +408,6 @@ public class GraphML2KEML {
 			}
 		}
 		return false;
-	}
-	
-	private PositionalInformation readPositions(Node node) {
-		return new PositionalInformation(node);	
 	}
 	
 	private void printAttributeNames (Node node) {

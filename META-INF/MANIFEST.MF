@@ -9,6 +9,7 @@ Import-Package: keml,
  keml.impl,
  keml.presentation,
  keml.provider,
- keml.util
+ keml.util,
+ org.eclipse.emf.ecore.xmi.impl;version="2.36.0"
 Automatic-Module-Name: keml.io
 Bundle-RequiredExecutionEnvironment: JavaSE-21

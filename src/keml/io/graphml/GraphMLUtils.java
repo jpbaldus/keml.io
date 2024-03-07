@@ -1,10 +1,17 @@
 package keml.io.graphml;
 
 import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 public class GraphMLUtils {
+	
+	public static String readColor(Node node) {
+		Element e = (Element) node;
+		NamedNodeMap fill = e.getElementsByTagName("y:Fill").item(0).getAttributes();
+		return fill.getNamedItem("color").getNodeValue();
+	}
 	
 	public static String readLabel(Node node) {
 		Element e = (Element) node;

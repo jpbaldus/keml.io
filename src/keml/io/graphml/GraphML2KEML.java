@@ -134,7 +134,7 @@ public class GraphML2KEML {
 								break;
 							}
 							case "y:ShapeNode": {
-								String color = readColor(childNode);
+								String color = GraphMLUtils.readColor(childNode);
 								PositionalInformation pos = readPositions(childNode);
 
 								switch (color) {
@@ -424,13 +424,6 @@ public class GraphML2KEML {
 			}
 		}
 		return false;		
-	}
-	
-	
-	private String readColor(Node node) {
-		Element e = (Element) node;
-		NamedNodeMap fill = e.getElementsByTagName("y:Fill").item(0).getAttributes();
-		return fill.getNamedItem("color").getNodeValue();
 	}
 	
 	private PositionalInformation readPositions(Node node) {

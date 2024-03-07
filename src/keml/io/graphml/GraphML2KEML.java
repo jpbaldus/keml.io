@@ -191,7 +191,7 @@ public class GraphML2KEML {
 		NodeList edgeList = doc.getElementsByTagName("edge");
 		List<GraphEdge> edges = IntStream.range(0, edgeList.getLength())
 			    .mapToObj(edgeList::item)
-			    .map(s -> parseGraphEdge(s))
+			    .map(s -> new GraphEdge(s))
 			    .collect(Collectors.toList());
 		
 		// now work on edges to separate them: we need those of the sequence diagram to arrange the messages and can already define all relations between information in a second method
@@ -384,19 +384,6 @@ public class GraphML2KEML {
 	private boolean isOnLifeLine(PositionalInformation pos, PositionalInformation lifeLinePos) {
 		return ( lifeLinePos.getxLeft() - pos.getxLeft() <= 0 && lifeLinePos.getxRight() - pos.getxRight() >=0);
 	}
-	
-	private GraphEdge parseGraphEdge(Node edge) {
-		Element e = (Element) edge;
-		String id = e.getAttributes().getNamedItem("id").getNodeValue();
-		String source = e.getAttributes().getNamedItem("source").getNodeValue();
-		String target = e.getAttributes().getNamedItem("target").getNodeValue();
-		String label = GraphMLUtils.readLabel(e, "y:EdgeLabel");
-		InformationLinkType type = null;
-		
-		return new GraphEdge(id, source, target, label, type);
-	}
-	
-
 		
 	// works on the knowledge part of the graph to unite the information (with text) and its type (isInstruction)
 	// also sets the isInstruction flag on the information

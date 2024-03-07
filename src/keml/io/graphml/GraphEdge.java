@@ -12,17 +12,6 @@ public class GraphEdge {
 	private String target;
 	private String label;
 	private InformationLinkType type; //only used on InformationLink edges
-	
-	public GraphEdge(Node node) {
-		
-		Element e = (Element) node;
-		this.id = e.getAttributes().getNamedItem("id").getNodeValue();
-		this.source = e.getAttributes().getNamedItem("source").getNodeValue();
-		this.target = e.getAttributes().getNamedItem("target").getNodeValue();
-		this.label = GraphMLUtils.readLabel(e, "y:EdgeLabel");
-		this.type = determineType(e);
-		
-	}
 
 	public GraphEdge(String id, String sourceNodeId, String targetNodeId, String label, InformationLinkType type) {
 		super();
@@ -32,11 +21,21 @@ public class GraphEdge {
 		this.label = label;
 		this.type = type;
 	}
+		
+	// parse from node
+	public GraphEdge(Node node) {	
+		Element e = (Element) node;
+		this.id = e.getAttributes().getNamedItem("id").getNodeValue();
+		this.source = e.getAttributes().getNamedItem("source").getNodeValue();
+		this.target = e.getAttributes().getNamedItem("target").getNodeValue();
+		this.label = GraphMLUtils.readLabel(e, "y:EdgeLabel");
+		this.type = determineType(e);		
+	}
 	
 	private InformationLinkType determineType(Element e) {
 		InformationLinkType type = null;
 		
-		
+		// TODO
 		return type;
 	}
 	

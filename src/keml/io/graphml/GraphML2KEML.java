@@ -410,38 +410,21 @@ public class GraphML2KEML {
 		return forwardList;
 	}
 	
-	
 	boolean findMatchForMessage(String str, PositionalInformation pos, HashMap<String, PositionalInformation>posToMatch, boolean isInstr, Map<String, String>forwardList, HashMap<String,Object>kemlNodes ) {
 		for (Map.Entry<String, PositionalInformation> e: posToMatch.entrySet()) {
-			//type is on the right, so use right side of information (xr) and left side of isInstruction (xl) to match, also both heights (y)
-			if ( floatEquality( e.getValue().getxLeft(), pos.getxRight() ) 
-					&& floatEquality (e.getValue().getyLow(), pos.getyLow() )
-					&& floatEquality (e.getValue().getyHigh(), pos.getyHigh()) ) {
+			//type is on the right, so information (xr) and left side of pos (xl) match
+			if (e.getValue().touchesOnRight(pos)) {
 				forwardList.put(e.getKey(), str);
 				NewInformation info = (NewInformation) kemlNodes.get(str);
 				info.setIsInstruction(isInstr);
 				return true;
 			}
 		}
-		return false;		
+		return false;
 	}
 	
 	private PositionalInformation readPositions(Node node) {
-		Element e = (Element) node;
-		NamedNodeMap geo = e.getElementsByTagName("y:Geometry").item(0).getAttributes();
-		String x = geo.getNamedItem("x").getNodeValue();
-		Float xl = Float.parseFloat(x);
-		String width = geo.getNamedItem("width").getNodeValue();
-		Float xr = xl + Float.parseFloat(width);
-		String y = geo.getNamedItem("y").getNodeValue();
-		Float yl = Float.parseFloat(y);
-		String height = geo.getNamedItem("height").getNodeValue();
-		Float yh = yl + Float.parseFloat(height);
-		return new PositionalInformation(xl, xr, yl, yh);	
-	}	
-	
-	private boolean floatEquality(Float f1, Float f2) {
-		return Math.abs(f1-f2) < 0.001F;
+		return new PositionalInformation(node);	
 	}
 	
 	private void printAttributeNames (Node node) {

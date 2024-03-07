@@ -1,16 +1,11 @@
 package keml.io.graphml;
 
-import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
@@ -22,22 +17,18 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
 
 import keml.Author;
 import keml.Conversation;
 import keml.ConversationPartner;
 import keml.Information;
+import keml.InformationLinkType;
 import keml.KemlFactory;
-import keml.KemlPackage;
 import keml.MessageExecution;
 import keml.NewInformation;
 import keml.PreKnowledge;
 import keml.ReceiveMessage;
 import keml.SendMessage;
-import keml.impl.ConversationImpl;
-import keml.util.KemlAdapterFactory;
 
 
 import org.w3c.dom.*;
@@ -278,10 +269,7 @@ public class GraphML2KEML {
 		});
 		
 		usedBy.forEach(e -> {
-			System.out.println(e);
-			Information info = (Information) kemlNodes.get(e.getSource());
-			//todo does not work on preknowledge
-			
+			Information info = (Information) kemlNodes.get(e.getSource());			
 			if (info == null) { // info is neither preknowledge, nor the real node -> need to follow helper map (it does not contain pre-knowledge)
 				info = (Information) kemlNodes.get(informationNodeForwardMap.get(e.getSource()));			
 			}
@@ -300,13 +288,8 @@ public class GraphML2KEML {
 		System.out.println(informationConnection);
 		
 		System.out.println(kemlNodes.toString());
-		System.out.println(kemlNodes.size());
-		
-		if (authorPosition != null)
-			println(authorPosition.toString());
-		
-		println(conversationPartnerXs.toString());
-		println(potentialMessageExecutionXs.toString());	
+		System.out.println(kemlNodes.size());	
+	
 		
 		System.out.println("Read "+ nodeList.getLength() + " nodes and " + edgeList.getLength() + " edges.");
 
@@ -408,10 +391,18 @@ public class GraphML2KEML {
 		String source = e.getAttributes().getNamedItem("source").getNodeValue();
 		String target = e.getAttributes().getNamedItem("target").getNodeValue();
 		String label = readLabel(e, "y:EdgeLabel");
+		InformationLinkType type = determineType(e);
 		
-		return new GraphEdge(id, source, target, label);
+		return new GraphEdge(id, source, target, label, type);
 	}
 	
+	private InformationLinkType determineType(Element e) {
+		InformationLinkType type = null;
+		
+		
+		return type;
+	}
+		
 	// works on the knowledge part of the graph to unite the information (with text) and its type (isInstruction)
 	// also sets the isInstruction flag on the information
 	private Map<String, String> createNodeForwardList(
@@ -475,9 +466,7 @@ public class GraphML2KEML {
 	private String readColor(Node node) {
 		Element e = (Element) node;
 		NamedNodeMap fill = e.getElementsByTagName("y:Fill").item(0).getAttributes();
-		String color = fill.getNamedItem("color").getNodeValue();
-		println(color);
-		return color;
+		return fill.getNamedItem("color").getNodeValue();
 	}
 	
 	private PositionalInformation readPositions(Node node) {
@@ -502,15 +491,11 @@ public class GraphML2KEML {
 		return s.trim().replace('\n', ' ');
 	}
 	
-	private void println(String s) {
-		System.out.println(s);
-	}
-	
 	private void printAttributeNames (Node node) {
 		NamedNodeMap map = node.getAttributes();
 		for (int j =0; j< map.getLength(); j++)
 		{
-			println(map.item(j).getNodeName());
+			System.out.println(map.item(j).getNodeName());
 		}
 	}
 

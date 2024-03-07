@@ -101,7 +101,7 @@ public class GraphML2KEML {
 							case "y:SVGNode": {
 								// these nodes represent the conversation partners and the instruction icons on information
 								// each one with a label forms a new conversation partner (except for Author)
-								String label = readLabel(childNode);
+								String label = GraphMLUtils.readLabel(childNode);
 								if (!label.equals("")) {
 									// this is a life line, determine Position
 									PositionalInformation x = readPositions(childNode);
@@ -125,7 +125,7 @@ public class GraphML2KEML {
 								// we just need the pre-knowledge from it, that has <y:GenericNode configuration="com.yworks.bpmn.Artifact.withShadow">
 								if (childNode.getAttributes().item(0).getNodeValue().equals("com.yworks.bpmn.Artifact.withShadow")) {
 									nodeTypes.put(id, NodeType.PRE_KNOWLEDGE);
-									String label = readLabel(childNode);
+									String label = GraphMLUtils.readLabel(childNode);
 									PreKnowledge pre = 	factory.createPreKnowledge();
 									pre.setMessage(label);
 									kemlNodes.put(id, pre);
@@ -140,7 +140,7 @@ public class GraphML2KEML {
 								switch (color) {
 									case "#FFFF99":  //light-yellow, used on information by WebBrowser
 									case "#CCFFFF": { // light-blue, used on information by LLM
-										String label = readLabel(childNode);
+										String label = GraphMLUtils.readLabel(childNode);
 										nodeTypes.put(id, NodeType.NEW_INFORMATION);
 										NewInformation info = factory.createNewInformation();
 										info.setMessage(label);
@@ -390,18 +390,13 @@ public class GraphML2KEML {
 		String id = e.getAttributes().getNamedItem("id").getNodeValue();
 		String source = e.getAttributes().getNamedItem("source").getNodeValue();
 		String target = e.getAttributes().getNamedItem("target").getNodeValue();
-		String label = readLabel(e, "y:EdgeLabel");
-		InformationLinkType type = determineType(e);
+		String label = GraphMLUtils.readLabel(e, "y:EdgeLabel");
+		InformationLinkType type = null;
 		
 		return new GraphEdge(id, source, target, label, type);
 	}
 	
-	private InformationLinkType determineType(Element e) {
-		InformationLinkType type = null;
-		
-		
-		return type;
-	}
+
 		
 	// works on the knowledge part of the graph to unite the information (with text) and its type (isInstruction)
 	// also sets the isInstruction flag on the information
@@ -445,24 +440,6 @@ public class GraphML2KEML {
 	}
 	
 	
-	private String readLabel(Node node) {
-		Element e = (Element) node;
-		return readLabel(e, "y:NodeLabel");
-	}
-	
-	private String readLabel(Element e, String elementName) {
-		String label = "";
-		NodeList nodeLabels = e.getElementsByTagName(elementName);
-		for (int i=0; i<nodeLabels.getLength(); i++) {
-			Node childNode = nodeLabels.item(i);
-			if (childNode.getAttributes().getNamedItem("hasText") == null) {//a text exists
-				label = childNode.getChildNodes().item(0).getNodeValue(); //TODO is item 0 guaranteed?
-				label = cleanLabel(label);
-			}
-		}
-		return label;
-	}
-	
 	private String readColor(Node node) {
 		Element e = (Element) node;
 		NamedNodeMap fill = e.getElementsByTagName("y:Fill").item(0).getAttributes();
@@ -485,10 +462,6 @@ public class GraphML2KEML {
 	
 	private boolean floatEquality(Float f1, Float f2) {
 		return Math.abs(f1-f2) < 0.001F;
-	}
-	
-	private String cleanLabel(String s) {
-		return s.trim().replace('\n', ' ');
 	}
 	
 	private void printAttributeNames (Node node) {

@@ -1,5 +1,8 @@
 package keml.io.graphml;
 
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+
 import keml.InformationLinkType;
 
 public class GraphEdge {
@@ -9,6 +12,17 @@ public class GraphEdge {
 	private String target;
 	private String label;
 	private InformationLinkType type; //only used on InformationLink edges
+	
+	public GraphEdge(Node node) {
+		
+		Element e = (Element) node;
+		this.id = e.getAttributes().getNamedItem("id").getNodeValue();
+		this.source = e.getAttributes().getNamedItem("source").getNodeValue();
+		this.target = e.getAttributes().getNamedItem("target").getNodeValue();
+		this.label = GraphMLUtils.readLabel(e, "y:EdgeLabel");
+		this.type = determineType(e);
+		
+	}
 
 	public GraphEdge(String id, String sourceNodeId, String targetNodeId, String label, InformationLinkType type) {
 		super();
@@ -18,6 +32,14 @@ public class GraphEdge {
 		this.label = label;
 		this.type = type;
 	}
+	
+	private InformationLinkType determineType(Element e) {
+		InformationLinkType type = null;
+		
+		
+		return type;
+	}
+	
 	public String getId() {
 		return id;
 	}

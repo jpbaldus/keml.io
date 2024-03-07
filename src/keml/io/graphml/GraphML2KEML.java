@@ -138,6 +138,7 @@ public class GraphML2KEML {
 									PreKnowledge pre = 	factory.createPreKnowledge();
 									pre.setMessage(label);
 									kemlNodes.put(id, pre);
+									author.getPreknowledge().add(pre);
 								}
 								break;
 							}

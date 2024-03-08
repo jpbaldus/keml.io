@@ -8,4 +8,5 @@
 #Plugins
 /bin
 
-
+#intelliJ
+*.iml

@@ -38,5 +38,10 @@ public class KemlFileHandler {
 		}
 	}
 	
+	public Conversation loadKeml(String path) {
+		Resource resource = resS.getResource(URI.createFileURI(path), true);
+		return (Conversation) resource.getContents().get(0);		
+	}
+	
 
 }

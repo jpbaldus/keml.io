@@ -13,3 +13,4 @@ Import-Package: keml,
  org.eclipse.emf.ecore.xmi.impl;version="2.36.0"
 Automatic-Module-Name: keml.io
 Bundle-RequiredExecutionEnvironment: JavaSE-21
+Export-Package: keml.io

@@ -37,10 +37,6 @@ public class PositionalInformation {
 				&& floatEquality (yHigh, pos.getyHigh());
 	}
 	
-	public static boolean isOnLifeLine(PositionalInformation pos, PositionalInformation lifeLinePos) {
-		return ( lifeLinePos.getxLeft() - pos.getxLeft() <= 0 && lifeLinePos.getxRight() - pos.getxRight() >=0);
-	}
-	
 	public boolean isOnLine(PositionalInformation lifeLinePos) {
 		return ( lifeLinePos.getxLeft() - xLeft <= 0 && lifeLinePos.getxRight() - xRight >=0);
 	}
@@ -79,4 +75,5 @@ public class PositionalInformation {
 	private static boolean floatEquality(Float f1, Float f2) {
 		return Math.abs(f1-f2) < 0.001F;
 	}
+
 }

@@ -183,9 +183,7 @@ public class GraphML2KEML {
 		
 		// nodeForwardList: HashMap<String, String> lookup for which real information node is used (we have 2 nodes form message + icon)
 		Map<String, String> informationNodeForwardMap = createNodeForwardList(informationPositions, informationIsInstructionPositions, informationIsNoInstructionPositions, kemlNodes);
-		
-		
-		
+			
 		// ************* edges ****************************
 		NodeList edgeList = doc.getElementsByTagName("edge");
 		List<GraphEdge> edges = IntStream.range(0, edgeList.getLength())
@@ -240,8 +238,7 @@ public class GraphML2KEML {
 							throw new IllegalArgumentException("Node "+ e.getTarget() + " of type " + nodeTypes.get(e.getTarget()) + " not valid on edge from " +src);
 						}
 					}
-					break;
-					
+					break;				
 				}
 				case PRE_KNOWLEDGE: {
 					if (nodeTypes.get(e.getTarget()) == NodeType.MESSAGE_SPEC) {
@@ -257,13 +254,12 @@ public class GraphML2KEML {
 		// ***************** Sequence Diagram ********************************
 		ArrayList<String> msgsInOrder = buildSequenceDiagram(conversation, authorPosition, conversationPartnerXs, kemlNodes, potentialMessageExecutionXs, sequenceDiagramEdges);
 		
-		// ***************** Connecting information and sequence diagram ********
+		// TODO we could use them to save preKnowledge in order
 		
-		// TODO maybe more verbose read?
-		// 			MessageExecution m = (MessageExecution) kemlNodes.get(e.getTarget()); to be able to print it on log msg
+		// ***************** Connecting information and sequence diagram ********
 		generates.forEach(e -> {
 			ReceiveMessage msg = (ReceiveMessage) kemlNodes.get(e.getSource());
-			NewInformation info = (NewInformation) kemlNodes.get(informationNodeForwardMap.get(e.getTarget()));
+			NewInformation info = (NewInformation) kemlNodes.get(informationNodeForwardMap.get(e.getTarget())); // follow helper anyway (no preknowledge there)
 			msg.getGenerates().add(info);
 		});
 		
@@ -387,17 +383,17 @@ public class GraphML2KEML {
 				.collect(Collectors.toMap(s -> s, s -> s));
 			
 		informationPositions.forEach((str, pos)-> {
-			boolean matched = findMatchForMessage(str, pos, informationIsInstructionPositions, true, forwardList, kemlNodes);
+			boolean matched = findMatchForInformation(str, pos, informationIsInstructionPositions, true, forwardList, kemlNodes);
 			if (!matched) {
-				boolean nowMatched = findMatchForMessage(str, pos, informationIsNoInstructionPositions, false, forwardList, kemlNodes);
+				boolean nowMatched = findMatchForInformation(str, pos, informationIsNoInstructionPositions, false, forwardList, kemlNodes);
 				if (!nowMatched)
-					throw new IllegalArgumentException("No match for node "+str);
+					throw new IllegalArgumentException("No match for information node "+str);
 			}	
 		});
 		return forwardList;
 	}
 	
-	boolean findMatchForMessage(String str, PositionalInformation pos, HashMap<String, PositionalInformation>posToMatch, boolean isInstr, Map<String, String>forwardList, HashMap<String,Object>kemlNodes ) {
+	private boolean findMatchForInformation(String str, PositionalInformation pos, HashMap<String, PositionalInformation>posToMatch, boolean isInstr, Map<String, String>forwardList, HashMap<String,Object>kemlNodes ) {
 		for (Map.Entry<String, PositionalInformation> e: posToMatch.entrySet()) {
 			//type is on the right, so information (xr) and left side of pos (xl) match
 			if (e.getValue().touchesOnRight(pos)) {

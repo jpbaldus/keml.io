@@ -17,7 +17,6 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.commons.io.FilenameUtils;
-
 import keml.Author;
 import keml.Conversation;
 import keml.ConversationPartner;
@@ -67,7 +66,8 @@ public class GraphML2KEML {
 		PositionalInformation authorPosition = null;	
 		HashMap<String, PositionalInformation> conversationPartnerXs = new HashMap<String, PositionalInformation>(); // helper map for all conversation partners' positions	
 		HashMap<String, PositionalInformation> potentialMessageExecutionXs = new HashMap<String, PositionalInformation>(); // helper map for all possible message executions
-
+		List<String> interrupts = new ArrayList<String>();
+		
 		HashMap<String, PositionalInformation> informationPositions = new HashMap<String, PositionalInformation>();
 		HashMap<String, PositionalInformation> informationIsInstructionPositions = new HashMap<String, PositionalInformation>();
 		HashMap<String, PositionalInformation> informationIsNoInstructionPositions = new HashMap<String, PositionalInformation>();
@@ -121,7 +121,7 @@ public class GraphML2KEML {
 								break;
 							}
 							case "y:GenericNode": {
-								// we just need the pre-knowledge from it, that has <y:GenericNode configuration="com.yworks.bpmn.Artifact.withShadow">
+								// we need the pre-knowledge from it, that has <y:GenericNode configuration="com.yworks.bpmn.Artifact.withShadow">
 								if (childNode.getAttributes().item(0).getNodeValue().equals("com.yworks.bpmn.Artifact.withShadow")) {
 									nodeTypes.put(id, NodeType.PRE_KNOWLEDGE);
 									String label = GraphMLUtils.readLabel(childNode);
@@ -129,6 +129,11 @@ public class GraphML2KEML {
 									pre.setMessage(label);
 									kemlNodes.put(id, pre);
 									author.getPreknowledge().add(pre);
+								}
+								// else it might be an interrupt:
+								else if (childNode.getAttributes().item(0).getNodeValue().equals("com.yworks.bpmn.Gateway.withShadow")) {
+									nodeTypes.put(id, NodeType.INTERRUPT);
+									interrupts.add(id);
 								}
 								break;
 							}
@@ -199,10 +204,15 @@ public class GraphML2KEML {
 		edges.forEach(e -> 
 		{
 			NodeType src = nodeTypes.get(e.getSource());
+			if (src == null)
+				System.err.println("No type for source node " + e.getSource());
+			NodeType targetType = nodeTypes.get(e.getTarget());
+			if (targetType == null)
+				System.err.println("No type for target node " + e.getTarget());
 			switch (src) {
 				case MESSAGE_SPEC: {
-					switch(nodeTypes.get(e.getTarget())) {
-						case MESSAGE_SPEC: {
+					switch(targetType) {
+						case MESSAGE_SPEC: case INTERRUPT: {
 							sequenceDiagramEdges.add(e);
 							break;
 						}
@@ -211,7 +221,7 @@ public class GraphML2KEML {
 							break;
 						}
 						default: {
-							throw new IllegalArgumentException("Node "+ e.getTarget() + " of type " + nodeTypes.get(e.getTarget()) + " not valid on edge from " +src);
+							throw new IllegalArgumentException("Node "+ e.getTarget() + " of type " + targetType + " not valid on edge from " +src);
 						}
 					}
 					break;
@@ -220,12 +230,12 @@ public class GraphML2KEML {
 					if (nodeTypes.get(e.getTarget()) == NodeType.MESSAGE_SPEC) {
 						sequenceDiagramEdges.add(e);
 					} else {
-						throw new IllegalArgumentException("Node "+ e.getTarget() + " of type " + nodeTypes.get(e.getTarget()) + " not valid on edge from "+src);
+						throw new IllegalArgumentException("Node "+ e.getTarget() + " of type " + targetType + " not valid on edge from "+src);
 					}
 					break;
 				}
 				case NEW_INFORMATION: {
-					switch(nodeTypes.get(e.getTarget())) {
+					switch(targetType) {
 						case MESSAGE_SPEC: {
 							usedBy.add(e);
 							break;
@@ -235,16 +245,16 @@ public class GraphML2KEML {
 							break;
 						}
 						default: {
-							throw new IllegalArgumentException("Node "+ e.getTarget() + " of type " + nodeTypes.get(e.getTarget()) + " not valid on edge from " +src);
+							throw new IllegalArgumentException("Node "+ e.getTarget() + " of type " + targetType + " not valid on edge from " +src);
 						}
 					}
 					break;				
 				}
 				case PRE_KNOWLEDGE: {
-					if (nodeTypes.get(e.getTarget()) == NodeType.MESSAGE_SPEC) {
+					if (targetType == NodeType.MESSAGE_SPEC) {
 						usedBy.add(e);
 					} else {
-						throw new IllegalArgumentException("Node "+ e.getTarget() + " of type " + nodeTypes.get(e.getTarget()) + " not valid on edge from "+src);
+						throw new IllegalArgumentException("Node "+ e.getTarget() + " of type " + targetType + " not valid on edge from "+src);
 					}
 					break;
 				}
@@ -252,7 +262,8 @@ public class GraphML2KEML {
 		});
 		
 		// ***************** Sequence Diagram ********************************
-		ArrayList<String> msgsInOrder = buildSequenceDiagram(conversation, authorPosition, conversationPartnerXs, kemlNodes, potentialMessageExecutionXs, sequenceDiagramEdges);
+		ArrayList<String> msgsInOrder = buildSequenceDiagram(conversation, authorPosition, conversationPartnerXs,
+				kemlNodes, potentialMessageExecutionXs, sequenceDiagramEdges, interrupts);
 		
 		// TODO we could use them to save preKnowledge in order
 		
@@ -296,7 +307,7 @@ public class GraphML2KEML {
 	private ArrayList<String> buildSequenceDiagram(Conversation conversation, PositionalInformation authorPosition,
 			HashMap<String, PositionalInformation> conversationPartnerXs,
 			HashMap<String, Object> kemlNodes, HashMap<String, PositionalInformation> potentialMessageExecutionXs,
-			List<GraphEdge> edges) {
+			List<GraphEdge> edges, List<String> interrupts) {
 		
 		addOrderedConversationPartners(conversation, conversationPartnerXs, kemlNodes);
 		
@@ -318,18 +329,39 @@ public class GraphML2KEML {
 			.forEach(v -> {
 				lifeLineFinder.put(v.getKey(), partner.getKey());	
 			});
-		});
+		});		
 		
 		//now find messages (edges) that connect the author with another lifeline
 		// we can first eliminate all that have no label to improve efficiency
 		edges.removeIf(s -> s.getLabel().isEmpty());
-		
+				
 		MessageExecution[] msgs = new MessageExecution[authorMessagesInOrder.size()];
+		
+		// now first work on interrupts as special cases:
+		interrupts.forEach(interrupt -> {
+			List<GraphEdge> interruptEdges = edges.stream().filter(edge -> edge.getTarget().equals(interrupt)).toList();
+			if (interruptEdges.size()!=2)
+				throw new IllegalArgumentException("Cannot parse interrupt "+interrupt+ ", it has "+interruptEdges.size()+" edges.");
+			OptionalInt authorIndex = indexOnAuthor(interruptEdges.get(0).getSource(), authorMessagesInOrder);
+			GraphEdge relevant;
+			if (authorIndex.isPresent()) {
+				relevant = interruptEdges.get(1);
+			} else {
+				authorIndex = indexOnAuthor(interruptEdges.get(1).getSource(), authorMessagesInOrder);
+				relevant = interruptEdges.get(0);
+			}
+			int index = authorIndex.getAsInt();		
+			ReceiveMessage msg = factory.createReceiveMessage();
+			msg.setIsInterrupted(true);
+			msg.setContent(relevant.getLabel());
+			msg.setYPosition(index);
+			msg.setCounterPart((ConversationPartner) kemlNodes.get(relevant.getSource()));
+			kemlNodes.put(authorMessagesInOrder.get(index), msg);
+			msgs[index] = msg;	
+		});
 
 		edges.forEach(e -> {
-			OptionalInt srcIndexOnAuth = IntStream.range(0, authorMessagesInOrder.size())
-					   .filter(i -> authorMessagesInOrder.get(i).equals(e.getSource()))
-					   .findFirst();
+			OptionalInt srcIndexOnAuth = indexOnAuthor(e.getSource(), authorMessagesInOrder);
 			if (srcIndexOnAuth.isPresent()) {
 				int index = srcIndexOnAuth.getAsInt();
 				String partnerId = lifeLineFinder.get(e.getTarget());
@@ -343,9 +375,7 @@ public class GraphML2KEML {
 					msgs[index] = msg;
 				}
 			} else {
-				OptionalInt targetIndexOnAuth = IntStream.range(0, authorMessagesInOrder.size())
-						   .filter(i -> authorMessagesInOrder.get(i).equals(e.getTarget()))
-						   .findFirst();
+				OptionalInt targetIndexOnAuth = indexOnAuthor(e.getTarget(), authorMessagesInOrder);
 				if (targetIndexOnAuth.isPresent()) {
 					int index = targetIndexOnAuth.getAsInt();
 					String partnerId = lifeLineFinder.get(e.getSource());
@@ -359,13 +389,18 @@ public class GraphML2KEML {
 						msgs[index] = msg;
 					}
 				}
-				
 			}
 		});
 		//now finally insert all messages in order
 		author.getMessageExecutions().addAll(Arrays.asList(msgs));
 		
 		return authorMessagesInOrder;
+	}
+	
+	private static OptionalInt indexOnAuthor(String elem, List<String> authorMessagesInOrder) {
+		return IntStream.range(0, authorMessagesInOrder.size())
+				   .filter(i -> authorMessagesInOrder.get(i).equals(elem))
+				   .findFirst();
 	}
 		
 	// works on the knowledge part of the graph to unite the information (with text) and its type (isInstruction)

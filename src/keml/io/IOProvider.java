@@ -22,7 +22,11 @@ public class IOProvider {
 	 */
 	public static void main(String[] args) throws Exception {
 		
-		String graphmlPath = "../../graphs/objective3-2-2v4.graphml";
+		String folder = "../../graphs/";
+		String file = "objective3-2-2v4.graphml";
+		String file2 = "objective3-1-1.graphml";
+		
+		String graphmlPath = folder+file2;
 		String kemlPath = FilenameUtils.removeExtension(graphmlPath) + ".keml";
 
 		Conversation conv = new GraphML2KEML().readFromPath(graphmlPath);

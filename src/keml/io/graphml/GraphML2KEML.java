@@ -251,10 +251,17 @@ public class GraphML2KEML {
 					break;				
 				}
 				case PRE_KNOWLEDGE: {
-					if (targetType == NodeType.MESSAGE_SPEC) {
-						usedBy.add(e);
-					} else {
-						throw new IllegalArgumentException("Node "+ e.getTarget() + " of type " + targetType + " not valid on edge from "+src);
+					switch(targetType) {
+						case MESSAGE_SPEC: {
+							usedBy.add(e);
+							break;
+						}
+						case NEW_INFORMATION: {
+							informationConnection.add(e);
+							break;
+						}
+						default:
+							throw new IllegalArgumentException("Node "+ e.getTarget() + " of type " + targetType + " not valid on edge from "+src);
 					}
 					break;
 				}
@@ -269,9 +276,14 @@ public class GraphML2KEML {
 		
 		// ***************** Connecting information and sequence diagram ********
 		generates.forEach(e -> {
-			ReceiveMessage msg = (ReceiveMessage) kemlNodes.get(e.getSource());
-			NewInformation info = (NewInformation) kemlNodes.get(informationNodeForwardMap.get(e.getTarget())); // follow helper anyway (no preknowledge there)
-			msg.getGenerates().add(info);
+			try {
+				ReceiveMessage msg = (ReceiveMessage) kemlNodes.get(e.getSource());
+				NewInformation info = (NewInformation) kemlNodes.get(informationNodeForwardMap.get(e.getTarget())); // follow helper anyway (no preknowledge there)
+				msg.getGenerates().add(info);
+			} catch (ClassCastException ex) {
+				System.err.println("Edge "+ e + " seems to be start on wrong node (send not receive).");
+				throw ex;
+			}
 		});
 		
 		usedBy.forEach(e -> {
@@ -422,7 +434,7 @@ public class GraphML2KEML {
 			if (!matched) {
 				boolean nowMatched = findMatchForInformation(str, pos, informationIsNoInstructionPositions, false, forwardList, kemlNodes);
 				if (!nowMatched)
-					throw new IllegalArgumentException("No match for information node "+str);
+					throw new IllegalArgumentException("No match for information node "+str + " with: "+kemlNodes.get(str).toString());
 			}	
 		});
 		return forwardList;

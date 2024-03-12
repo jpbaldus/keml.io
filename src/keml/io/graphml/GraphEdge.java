@@ -34,24 +34,15 @@ public class GraphEdge {
 	}
 	
 	private static InformationLinkType determineInformationLinkType(Element e) {
-		InformationLinkType type = null;
 		String targetShape = arrowHead(e);
-		
-		System.out.println("edge with head "+ targetShape + " is dashed: "+ isDashed(e) );
-		// TODO
 		switch (targetShape) {
-			case "white_diamond": {
-				return InformationLinkType.SUPPLEMENT;
-			}
-			case "standard": {
-				
-				break;
-			}
-			default: {
-				return null;
-			}
+			case "white_diamond": return InformationLinkType.SUPPLEMENT;
+			case "white_circle": case "transparent_circle": return InformationLinkType.SUPPORT;
+			case "black_circle": return InformationLinkType.ACCEPT;
+			case "": return InformationLinkType.CHALLENGE;
+			case "cross": return InformationLinkType.REJECT;
+			default: return null;	
 		}	
-		return type;
 	}
 	
 	private static boolean isDashed(Element e) {	

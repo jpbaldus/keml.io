@@ -355,7 +355,7 @@ public class GraphML2KEML {
 			msg.setIsInterrupted(true);
 			msg.setContent(relevant.getLabel());
 			msg.setYPosition(index);
-			msg.setCounterPart((ConversationPartner) kemlNodes.get(relevant.getSource()));
+			msg.setCounterPart((ConversationPartner) kemlNodes.get(lifeLineFinder.get(relevant.getSource())));
 			kemlNodes.put(authorMessagesInOrder.get(index), msg);
 			msgs[index] = msg;	
 		});

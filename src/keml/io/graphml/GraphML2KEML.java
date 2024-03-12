@@ -354,7 +354,7 @@ public class GraphML2KEML {
 			ReceiveMessage msg = factory.createReceiveMessage();
 			msg.setIsInterrupted(true);
 			msg.setContent(relevant.getLabel());
-			msg.setYPosition(index);
+			msg.setTiming(index);
 			msg.setCounterPart((ConversationPartner) kemlNodes.get(lifeLineFinder.get(relevant.getSource())));
 			kemlNodes.put(authorMessagesInOrder.get(index), msg);
 			msgs[index] = msg;	
@@ -369,7 +369,7 @@ public class GraphML2KEML {
 					//create a send message execution spec
 					SendMessage msg = factory.createSendMessage();
 					msg.setContent(e.getLabel());
-					msg.setYPosition(index);
+					msg.setTiming(index);
 					msg.setCounterPart((ConversationPartner) kemlNodes.get(partnerId));
 					kemlNodes.put(authorMessagesInOrder.get(index), msg);
 					msgs[index] = msg;
@@ -383,7 +383,7 @@ public class GraphML2KEML {
 						//create a receive message execution spec
 						ReceiveMessage msg = factory.createReceiveMessage();
 						msg.setContent(e.getLabel());
-						msg.setYPosition(index);
+						msg.setTiming(index);
 						msg.setCounterPart((ConversationPartner) kemlNodes.get(partnerId));
 						kemlNodes.put(authorMessagesInOrder.get(index), msg);
 						msgs[index] = msg;

@@ -21,6 +21,7 @@ import keml.Author;
 import keml.Conversation;
 import keml.ConversationPartner;
 import keml.Information;
+import keml.InformationLink;
 import keml.KemlFactory;
 import keml.MessageExecution;
 import keml.NewInformation;
@@ -48,8 +49,7 @@ public class GraphML2KEML {
 		
 		doc.getDocumentElement().normalize();
 			
-		return graph2keml(doc, FilenameUtils.getBaseName(path));
-		
+		return graph2keml(doc, FilenameUtils.getBaseName(path));	
 	}
 	
 	private Conversation graph2keml(Document doc, String title) {
@@ -287,22 +287,24 @@ public class GraphML2KEML {
 		});
 		
 		usedBy.forEach(e -> {
-			Information info = (Information) kemlNodes.get(e.getSource());			
-			if (info == null) { // info is neither preknowledge, nor the real node -> need to follow helper map (it does not contain pre-knowledge)
-				info = (Information) kemlNodes.get(informationNodeForwardMap.get(e.getSource()));			
-			}
+			Information info = getInformationFromKeml(e.getSource(), informationNodeForwardMap, kemlNodes);
 			SendMessage msg = (SendMessage) kemlNodes.get(e.getTarget());
 			info.getIsUsedOn().add(msg);
 		});
 		
 		// ***************** Information Connections **********************
-		// TODO needs to be re-worked on diagram
-		System.out.println(informationConnection);
+		informationConnection.forEach(e -> {
+			Information source = getInformationFromKeml(e.getSource(), informationNodeForwardMap, kemlNodes);
+			Information target = getInformationFromKeml(e.getTarget(), informationNodeForwardMap, kemlNodes);
+			InformationLink i = factory.createInformationLink();
+			i.setLinkText(e.getLabel());
+			i.setTarget(target);
+			i.setType(e.getInformationLinkType());
+			source.getCauses().add(i);
+		});
 		
-		System.out.println(kemlNodes.toString());	
-		
-		System.out.println("Read "+ nodeList.getLength() + " nodes and " + edgeList.getLength() + " edges into a conversation with " + kemlNodes.size() + " KEML elements.");
-
+		System.out.println("Read "+ nodeList.getLength() + " nodes and " + edgeList.getLength() + " edges into a conversation with "
+		+ kemlNodes.size() + " matching KEML nodes and " + informationConnection.size()+ " information connections.");
 		
 		return conversation;
 	}
@@ -314,6 +316,15 @@ public class GraphML2KEML {
 		.forEach(c -> {
 			conversation.getConversationPartners().add((ConversationPartner) kemlNodes.get(c.getKey()));
 		});
+	}
+	
+	// needs to follow node forward map to get information and icon together, also not follow if the info is preknowledge
+	private Information getInformationFromKeml(String infoName, Map<String, String> informationNodeForwardMap, Map<String, Object> kemlNodes) {
+		Information info = (Information) kemlNodes.get(infoName);			
+		if (info == null) { // infoName is neither preknowledge, nor the real node -> need to follow helper map (it does not contain pre-knowledge)
+			info = (Information) kemlNodes.get(informationNodeForwardMap.get(infoName));			
+		}
+		return info;
 	}
 	
 	private ArrayList<String> buildSequenceDiagram(Conversation conversation, PositionalInformation authorPosition,

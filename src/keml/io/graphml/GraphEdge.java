@@ -79,16 +79,11 @@ public class GraphEdge {
 	public void setLabel(String label) {
 		this.label = label;
 	}
-	@Override
-	public String toString() {
-		return "GraphEdge [id=" + id + ", sourceNodeId=" + source + ", targetNodeId=" + target + ", label="
-				+ label + "]";
-	}
-	public InformationLinkType getType() {
+	public InformationLinkType getInformationLinkType() {
 		return informationLinkType;
 	}
-	public void setType(InformationLinkType type) {
-		this.informationLinkType = type;
+	@Override
+	public String toString() {
+		return "GraphEdge [id=" + id + ", source=" + source + ", target=" + target + ", label=" + label + ", informationLinkType " + informationLinkType + "]";
 	}
-
 }

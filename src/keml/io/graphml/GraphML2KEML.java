@@ -5,12 +5,15 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -275,16 +278,7 @@ public class GraphML2KEML {
 		// TODO we could use them to save preKnowledge in order
 		
 		// ***************** Connecting information and sequence diagram ********
-		generates.forEach(e -> {
-			try {
-				ReceiveMessage msg = (ReceiveMessage) kemlNodes.get(e.getSource());
-				NewInformation info = (NewInformation) kemlNodes.get(informationNodeForwardMap.get(e.getTarget())); // follow helper anyway (no preknowledge there)
-				msg.getGenerates().add(info);
-			} catch (ClassCastException ex) {
-				System.err.println("Edge "+ e + " seems to be start on wrong node (send not receive).");
-				throw ex;
-			}
-		});
+		addGeneratesAndRepeats(generates, informationNodeForwardMap, kemlNodes);
 		
 		usedBy.forEach(e -> {
 			Information info = getInformationFromKeml(e.getSource(), informationNodeForwardMap, kemlNodes);
@@ -316,6 +310,32 @@ public class GraphML2KEML {
 		.forEach(c -> {
 			conversation.getConversationPartners().add((ConversationPartner) kemlNodes.get(c.getKey()));
 		});
+	}
+	
+	private void addGeneratesAndRepeats(List<GraphEdge> edges, Map<String, String> informationNodeForwardMap, Map<String, Object> kemlNodes) {
+		edges.stream().collect(Collectors.groupingBy(GraphEdge::getTarget))
+			.forEach(
+				(target, elist) -> {
+					NewInformation info = (NewInformation) kemlNodes.get(informationNodeForwardMap.get(target)); // follow helper anyway (no preknowledge there)
+					//now order messages to distinguish generates and repeats
+					ArrayList<ReceiveMessage> receives = elist.stream().map(e -> {
+						ReceiveMessage msg;
+						try {
+							msg = (ReceiveMessage) kemlNodes.get(e.getSource());
+						} catch (ClassCastException ex) {
+							System.err.println("Edge "+ e + " seems to start on wrong node " + e.getSource() + " (send not receive).");
+							throw ex;
+						}
+						return msg;
+					}).collect(Collectors.toCollection(ArrayList::new));
+					ReceiveMessage min = receives.stream().min(Comparator.comparingInt(ReceiveMessage::getTiming)).get();
+					receives.remove(min);
+					min.getGenerates().add(info);
+					receives.forEach(r -> {
+						r.getRepeats().add(info);
+					});
+				}
+			);
 	}
 	
 	// needs to follow node forward map to get information and icon together, also not follow if the info is preknowledge

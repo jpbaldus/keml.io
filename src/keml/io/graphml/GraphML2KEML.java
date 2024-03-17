@@ -299,6 +299,7 @@ public class GraphML2KEML {
 		
 		System.out.println("Read "+ nodeList.getLength() + " nodes and " + edgeList.getLength() + " edges into a conversation with "
 		+ kemlNodes.size() + " matching KEML nodes and " + informationConnection.size()+ " information connections.");
+		System.out.println("Ignored "+ ignoreNodes.size() + " nodes.");
 		
 		return conversation;
 	}
@@ -458,7 +459,7 @@ public class GraphML2KEML {
 			throw new IllegalArgumentException("Sizes do not match!");
 		}
 		Map<String, String> forwardList = informationPositions.keySet().stream()
-				.collect(Collectors.toMap(s -> s, s -> s));
+				.collect(Collectors.toMap(s -> s, s -> s)); // each information forwards to itself
 			
 		informationPositions.forEach((str, pos)-> {
 			boolean matched = findMatchForInformation(str, pos, informationIsInstructionPositions, true, forwardList, kemlNodes);
@@ -482,14 +483,6 @@ public class GraphML2KEML {
 			}
 		}
 		return false;
-	}
-	
-	private void printAttributeNames (Node node) {
-		NamedNodeMap map = node.getAttributes();
-		for (int j =0; j< map.getLength(); j++)
-		{
-			System.out.println(map.item(j).getNodeName());
-		}
 	}
 
 }

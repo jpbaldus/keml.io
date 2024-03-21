@@ -131,6 +131,9 @@ public class GraphML2KEML {
 									PreKnowledge pre = 	factory.createPreKnowledge();
 									pre.setMessage(label);
 									kemlNodes.put(id, pre);
+									PositionalInformation pos = new PositionalInformation(childNode);
+									// also store positions to find corresponding ! or person
+									informationPositions.put(id, pos);
 									author.getPreknowledge().add(pre);
 								}
 								// else it might be an interrupt:
@@ -298,7 +301,7 @@ public class GraphML2KEML {
 		});
 		
 		System.out.println("Read "+ nodeList.getLength() + " nodes and " + edgeList.getLength() + " edges into a conversation with "
-		+ kemlNodes.size() + " matching KEML nodes and " + informationConnection.size()+ " information connections.");
+		+ kemlNodes.size() + " matching KEML nodes, including " + informationConnection.size()+ " information links.");
 		System.out.println("Ignored "+ ignoreNodes.size() + " nodes.");
 		
 		return conversation;
@@ -477,7 +480,7 @@ public class GraphML2KEML {
 			//type is on the right, so information (xr) and left side of pos (xl) match
 			if (e.getValue().touchesOnRight(pos)) {
 				forwardList.put(e.getKey(), str);
-				NewInformation info = (NewInformation) kemlNodes.get(str);
+				Information info = (Information) kemlNodes.get(str);
 				info.setIsInstruction(isInstr);
 				return true;
 			}

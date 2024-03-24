@@ -246,7 +246,7 @@ public class GraphML2KEML {
 							usedBy.add(e);
 							break;
 						}
-						case NEW_INFORMATION: {
+						case NEW_INFORMATION: case PRE_KNOWLEDGE: {
 							informationConnection.add(e);
 							break;
 						}

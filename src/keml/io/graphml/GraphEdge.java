@@ -37,11 +37,25 @@ public class GraphEdge {
 		String targetShape = arrowHead(e);
 		switch (targetShape) {
 			case "white_diamond": return InformationLinkType.SUPPLEMENT;
-			case "white_circle": case "transparent_circle": return InformationLinkType.SUPPORT;
-			case "black_circle": return InformationLinkType.ACCEPT;
-			case "": return InformationLinkType.CHALLENGE;
-			case "cross": return InformationLinkType.REJECT;
-			default: return null;	
+			case "white_circle": case "transparent_circle": case "circle": {
+				if (isDashed(e))
+					return InformationLinkType.SUPPORT;
+				else
+					return InformationLinkType.STRONG_SUPPORT; 
+			}
+			case "black_circle": return InformationLinkType.STRONG_SUPPORT; // todo remove
+			case "skewed_dash": return InformationLinkType.ATTACK; // todo remove
+			case "cross": {
+				if (isDashed(e))
+					return InformationLinkType.ATTACK;
+				else
+					return InformationLinkType.STRONG_ATTACK;
+			}
+			case "standard": case "none": return null;
+			default: {
+				System.err.println(targetShape);
+				return null;	
+			}
 		}	
 	}
 	

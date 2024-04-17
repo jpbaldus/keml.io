@@ -320,6 +320,7 @@ public class GraphML2KEML {
 		edges.stream().collect(Collectors.groupingBy(GraphEdge::getTarget))
 			.forEach(
 				(target, elist) -> {
+					//System.out.println(target + ": "+ elist);
 					NewInformation info = (NewInformation) kemlNodes.get(informationNodeForwardMap.get(target)); // follow helper anyway (no preknowledge there)
 					//now order messages to distinguish generates and repeats
 					ArrayList<ReceiveMessage> receives = elist.stream().map(e -> {

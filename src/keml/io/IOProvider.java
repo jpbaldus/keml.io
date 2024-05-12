@@ -25,19 +25,22 @@ public class IOProvider {
 	 */
 	public static void main(String[] args) throws Exception {
 		
-		String folder = "../../graphs/";
-		
-		String conversations = folder + "conversations.json";
-		String conversationFolder = folder+"conv/";
+		String folder = "../keml.sample/case-study-log4j/2024-03-30-paperversion";//args[0];
+		System.out.println(folder);
+				
+		String conversations = folder + "/../conversations.json";
+		String conversationFolder = folder+"/../conv/";
 		new ChatGPTReader().split(conversations, conversationFolder);
 		
-		File[] files = new File(folder).listFiles((dir, name) -> name.toLowerCase().endsWith(".graphml"));
+		File resultsFolder = new File(folder + "/keml/");
+		
+		File[] files = new File(folder+"/graphml/").listFiles((dir, name) -> name.toLowerCase().endsWith(".graphml"));
 		
 		KemlFileHandler fileHandler = new KemlFileHandler();
 		
 		for (File file: files) {
 			try {	
-				transformFile(file, fileHandler, getConvFileFromFile(file, conversationFolder));
+				transformFile(file, fileHandler, resultsFolder, getConvFileFromFile(file, conversationFolder));
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -45,10 +48,10 @@ public class IOProvider {
 
 	}
 
-	private static void transformFile(File graphmlPath, KemlFileHandler fileHandler, File originalConv) throws Exception {
+	private static void transformFile(File graphmlPath, KemlFileHandler fileHandler, File targetFolder, File originalConv) throws Exception {
 		Conversation conv = new GraphML2KEML().readFromPath(graphmlPath.getAbsolutePath());
 		ConversationAdder.addOriginalConv(conv, originalConv);
-		String kemlPath = FilenameUtils.removeExtension(graphmlPath.getAbsolutePath()) + ".keml";
+		String kemlPath = targetFolder +"/" + FilenameUtils.removeExtension(graphmlPath.getName()) + ".keml";
 		fileHandler.saveKeml(conv, kemlPath);
 	}
 	

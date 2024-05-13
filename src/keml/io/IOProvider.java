@@ -37,9 +37,14 @@ public class IOProvider {
 		System.out.println("You started the graphml to keml conversion.\n I will read graphml files from " + folder 
 				+ ".\n I will write the resulting files into " + resultsFolder);
 
-		String conversations = folder + "/../conversations.json";
-		String conversationFolder = folder+"/../conv/";
-		new ChatGPTReader().split(conversations, conversationFolder);
+		String conversations = folder + "/conversations.json";
+		String conversationFolder = folder+"/conv/";
+		try{
+			new ChatGPTReader().split(conversations, conversationFolder);
+		} catch(IOException e) {
+			System.err.println("Cannot split " + conversations);
+			System.err.print(e);
+		}
 		
 		File[] files = new File(folder+"/graphml/").listFiles((dir, name) -> name.toLowerCase().endsWith(".graphml"));
 		

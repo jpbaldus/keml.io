@@ -13,10 +13,16 @@ import keml.SendMessage;
 
 public class ConversationAdder {
 	
-	public static void addOriginalConv(Conversation conv, File originalConv) throws IOException {
-		ArrayList<LLMMessage> msgs = LLMMessage.readFile(Path.of(originalConv.getPath()));
+	public static boolean addOriginalConv(Conversation conv, File originalConv) throws IOException {
 		ArrayList<MessageExecution> kemlMsgs = conv.getAuthor().getMessageExecutions().stream()
 				.filter(msg -> msg.getCounterPart().getName().equals("LLM")).collect(Collectors.toCollection(ArrayList::new));
+		ArrayList<LLMMessage> msgs;
+		try{
+			msgs = LLMMessage.readFile(Path.of(originalConv.getPath()));
+		} catch(IOException e) {
+			System.err.println("Cannot read " + originalConv + ". I will not add the original conversation information to " + conv.getTitle() +".keml");
+			return false;
+		}
 		if (msgs.size() != kemlMsgs.size()) {
 			System.err.println("The size of original messages ("+ msgs.size() + ") and keml messages with LLM ("+ kemlMsgs.size() + ") do not fit.");
 		}
@@ -29,6 +35,7 @@ public class ConversationAdder {
 			else
 				System.err.println("No match on "+msg +" and " + kemlM);
 		}
+		return true;
 	}
 
 }

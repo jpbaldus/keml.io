@@ -25,14 +25,21 @@ public class IOProvider {
 	 */
 	public static void main(String[] args) throws Exception {
 		
-		String folder = "../keml.sample/case-study-log4j/2024-03-30-paperversion";//args[0];
-		System.out.println(folder);
-				
+		String folder;
+		if (args.length == 0) {
+			folder = "../keml.sample/case-study-log4j/2024-03-30-paperversion";
+		} else {
+			folder = args[0];			
+		}
+		
+		File resultsFolder = new File(folder + "/keml/");
+
+		System.out.println("You started the graphml to keml conversion.\n I will read graphml files from " + folder 
+				+ ".\n I will write the resulting files into " + resultsFolder);
+
 		String conversations = folder + "/../conversations.json";
 		String conversationFolder = folder+"/../conv/";
 		new ChatGPTReader().split(conversations, conversationFolder);
-		
-		File resultsFolder = new File(folder + "/keml/");
 		
 		File[] files = new File(folder+"/graphml/").listFiles((dir, name) -> name.toLowerCase().endsWith(".graphml"));
 		
@@ -53,6 +60,7 @@ public class IOProvider {
 		ConversationAdder.addOriginalConv(conv, originalConv);
 		String kemlPath = targetFolder +"/" + FilenameUtils.removeExtension(graphmlPath.getName()) + ".keml";
 		fileHandler.saveKeml(conv, kemlPath);
+		System.out.println("Saved file as "+kemlPath);
 	}
 	
 	private static File getConvFileFromFile(File file, String conversationFolder) {

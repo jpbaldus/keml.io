@@ -1,4 +1,4 @@
-# keml.io
+# KEML I/O
 
 This project offers basic functionality for KEML file I/O as well as some more advanced routines on those files and auxiliaries:
 
@@ -6,7 +6,7 @@ This project offers basic functionality for KEML file I/O as well as some more a
 2) [Split a ChatGPT conversation file](#split-a-chatgpt-conversation-file) holding all conversations into one file per conversation
 3) [Enhance an KEML file with original conversation data]() from the ChatGPT conversation JSON
 
-Currently, all of these processes are executed but we plan to split this to allow for different work flows.
+Currently, all of these processes are executed when running teh project but we plan to split this to allow for different work flows.
 
 ## Running
 

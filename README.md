@@ -6,11 +6,16 @@ This project offers basic functionality for KEML file I/O as well as some more a
 2) [Split a ChatGPT conversation file](#split-a-chatgpt-conversation-file) holding all conversations into one file per conversation
 3) [Enhance an KEML file with original conversation data]() from the ChatGPT conversation JSON
 
-Currently, all of these processes are executed when running teh project but we plan to split this to allow for different work flows.
+Currently, all of these processes are executed when running the project but we plan to split this to allow for different work flows.
+
+## Installation
+
+Being an EMF project, this project is best viewed and adapted from Eclipse. If you load it there, make sure that you have the right project natures, that is **modeling** and **maven**.
+If you freshly added maven to this project in Eclipse, it might be necessary to run Maven -> Update project on it before using maven to install the necessary libraries.
 
 ## Running
 
-This project is a basic java application you can run in all normal ways (command line, IDE...).
+This project is a basic maven based java application you can run in all normal ways (command line, IDE...).
 It has one optional input: the base folder. If none is given, it executes the routines named above on the complete example from keml.sample - assuming that project is located on the same level as keml.io.
 
 ## Generate KEML Files from graphML Files

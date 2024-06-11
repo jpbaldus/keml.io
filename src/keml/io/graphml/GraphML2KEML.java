@@ -173,7 +173,7 @@ public class GraphML2KEML {
 									case "#C0C0C0": { //grey, used for messages
 										//we need this to complete the edges, we will just model the messageSpecs on author explicitly but first put all into the MessageXs
 										// also need y position to order them on the author
-										nodeTypes.put(id, NodeType.MESSAGE_SPEC);
+										nodeTypes.put(id, NodeType.MESSAGE);
 										potentialMessageXs.put(id, pos);
 										break;
 									}
@@ -216,9 +216,9 @@ public class GraphML2KEML {
 			if (targetType == null)
 				System.err.println("No type for target node " + e.getTarget());
 			switch (src) {
-				case MESSAGE_SPEC: {
+				case MESSAGE: {
 					switch(targetType) {
-						case MESSAGE_SPEC: case INTERRUPT: {
+						case MESSAGE: case INTERRUPT: {
 							sequenceDiagramEdges.add(e);
 							break;
 						}
@@ -233,7 +233,7 @@ public class GraphML2KEML {
 					break;
 				}
 				case AUTHOR: case CONVERSATION_PARTNER: {
-					if (nodeTypes.get(e.getTarget()) == NodeType.MESSAGE_SPEC) {
+					if (nodeTypes.get(e.getTarget()) == NodeType.MESSAGE) {
 						sequenceDiagramEdges.add(e);
 					} else {
 						throw new IllegalArgumentException("Node "+ e.getTarget() + " of type " + targetType + " not valid on edge from "+src);
@@ -242,7 +242,7 @@ public class GraphML2KEML {
 				}
 				case NEW_INFORMATION: {
 					switch(targetType) {
-						case MESSAGE_SPEC: {
+						case MESSAGE: {
 							usedBy.add(e);
 							break;
 						}
@@ -258,7 +258,7 @@ public class GraphML2KEML {
 				}
 				case PRE_KNOWLEDGE: {
 					switch(targetType) {
-						case MESSAGE_SPEC: {
+						case MESSAGE: {
 							usedBy.add(e);
 							break;
 						}

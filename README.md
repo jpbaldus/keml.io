@@ -1,93 +1,47 @@
-# keml.io
+# KEML I/O
 
+This project offers basic functionality for KEML file I/O as well as some more advanced routines on those files and auxiliaries:
 
+1) [Generate KEML files from graphML files](#generate-keml-files-from-graphml-files)
+2) [Split a ChatGPT conversation file](#split-a-chatgpt-conversation-file) holding all conversations into one file per conversation
+3) [Enhance an KEML file with original conversation data]() from the ChatGPT conversation JSON
 
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.uni-koblenz.de/llmspairprogramming/keml.io.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://gitlab.uni-koblenz.de/llmspairprogramming/keml.io/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+Currently, all of these processes are executed when running the project but we plan to split this to allow for different work flows.
 
 ## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+Being an EMF project, this project is best viewed and adapted from Eclipse. If you load it there, make sure that you have the right project natures, that is **modeling** and **maven**.
+If you freshly added maven to this project in Eclipse, it might be necessary to run Maven -> Update project on it before using maven to install the necessary libraries.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+## Running
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+This project is a basic maven based java application you can run in all normal ways (command line, IDE...).
+It has one optional input: the base folder. If none is given, it executes the routines named above on the complete example from keml.sample - assuming that project is located on the same level as keml.io.
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+## Generate KEML Files from graphML Files
+Given a base folder, the project converts all graphML files in the subfolder **graphml** into KEML files and puts these into a subfolder **keml** it creates if it does not exist yet.
+The parser for the graphML files runs several checks and reports severe parsing errors as exceptions, effectively aborting the current fils's conversation.
+However, further files are still processed.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+### Common Parsing Error Sources
+ - The parser determines which messages belong to a certain life line by checking their vertical position. Please make sure to have no messages exceed the vertical borders given by their respective life line icons. 
+- GraphML edges are directed. Although the edge might "look right" because you added the arrow to the source of the edge (because you drew it the wrong direction), the parser uses the edge direction and will throw an error. The direction even counts on edges on which you have no arrow tip.
+- An information message box and its icon indicating fact vs instruction need to be aligned almost perfectly.
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+## Split a ChatGPT Conversation File
+This method expects to find a file `conv.json` in the given base folder. This file must convey to the JSON schema OpenAI uses to export all conversations.
+It is a JSON Array holding JSONs for each conversation.
+Our tool splits the array into single JSONs, using each conversation's name also as file name (with .json ending).
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+## Enhance an KEML File with Original Conversation Data
+Under the given base folder this method expects to find a folder keml holding all relevant KEML files and another folder conv holding all original conversation JSONs.
+It then searches for a matching conv file for each keml file and attaches the messages from the original conversation to the keml model as attribute "originalContent".
+Note that this method only considers the KEML messages between the author and a conversation partner called "LLM".
+Problems like not matching counts of these messages and those in the original conversation or a different message direction are reported, but cause no abort.
+
+## Planned Features
+
+We plan to modify the project so that the user can choose to run just one of the possible processes. With this, one could for instance enhance KEML files that have been generated programatically.
 
 ## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+The license of this project is that of the [group](https://gitlab.uni-koblenz.de/keml).

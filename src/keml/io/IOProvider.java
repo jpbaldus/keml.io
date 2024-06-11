@@ -43,7 +43,7 @@ public class IOProvider {
 			new ChatGPTReader().split(conversations, conversationFolder);
 		} catch(IOException e) {
 			System.err.println("Cannot split " + conversations);
-			System.err.print(e);
+			System.err.println(e);
 		}
 		
 		File[] files = new File(folder+"/graphml/").listFiles((dir, name) -> name.toLowerCase().endsWith(".graphml"));

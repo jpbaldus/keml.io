@@ -7,14 +7,14 @@ import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 import keml.Conversation;
-import keml.MessageExecution;
+import keml.Message;
 import keml.ReceiveMessage;
 import keml.SendMessage;
 
 public class ConversationAdder {
 	
 	public static boolean addOriginalConv(Conversation conv, File originalConv) throws IOException {
-		ArrayList<MessageExecution> kemlMsgs = conv.getAuthor().getMessageExecutions().stream()
+		ArrayList<Message> kemlMsgs = conv.getAuthor().getMessages().stream()
 				.filter(msg -> msg.getCounterPart().getName().equals("LLM")).collect(Collectors.toCollection(ArrayList::new));
 		ArrayList<LLMMessage> msgs;
 		try{
@@ -27,7 +27,7 @@ public class ConversationAdder {
 			System.err.println("The size of original messages ("+ msgs.size() + ") and keml messages with LLM ("+ kemlMsgs.size() + ") do not fit.");
 		}
 		for(int i=0; i<msgs.size(); i++) {
-			MessageExecution kemlM = kemlMsgs.get(i);
+			Message kemlM = kemlMsgs.get(i);
 			LLMMessage msg = msgs.get(i);
 			if(kemlM instanceof SendMessage && msg.getAuthor().equals("Author") ||
 					kemlM instanceof ReceiveMessage && msg.getAuthor().equals("LLM"))

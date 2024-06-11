@@ -26,7 +26,7 @@ import keml.ConversationPartner;
 import keml.Information;
 import keml.InformationLink;
 import keml.KemlFactory;
-import keml.MessageExecution;
+import keml.Message;
 import keml.NewInformation;
 import keml.PreKnowledge;
 import keml.ReceiveMessage;
@@ -65,10 +65,10 @@ public class GraphML2KEML {
 		HashMap<String, Object> kemlNodes = new HashMap<String, Object>();
 		HashMap<String, NodeType> nodeTypes = new HashMap<String, NodeType>();
 		
-		//helper information: determine execution specs via positions, also group nodes and hence edges
+		//helper information: determine messages via positions, also group nodes and hence edges
 		PositionalInformation authorPosition = null;	
 		HashMap<String, PositionalInformation> conversationPartnerXs = new HashMap<String, PositionalInformation>(); // helper map for all conversation partners' positions	
-		HashMap<String, PositionalInformation> potentialMessageExecutionXs = new HashMap<String, PositionalInformation>(); // helper map for all possible message executions
+		HashMap<String, PositionalInformation> potentialMessageXs = new HashMap<String, PositionalInformation>(); // helper map for all possible messages
 		List<String> interrupts = new ArrayList<String>();
 		
 		HashMap<String, PositionalInformation> informationPositions = new HashMap<String, PositionalInformation>();
@@ -170,11 +170,11 @@ public class GraphML2KEML {
 										break;
 										
 									}
-									case "#C0C0C0": { //grey, used for message executions
-										//we need this to complete the edges, we will just model the messageSpecs on author explicitly but first put all into the messageExecutionXs
+									case "#C0C0C0": { //grey, used for messages
+										//we need this to complete the edges, we will just model the messageSpecs on author explicitly but first put all into the MessageXs
 										// also need y position to order them on the author
 										nodeTypes.put(id, NodeType.MESSAGE_SPEC);
-										potentialMessageExecutionXs.put(id, pos);
+										potentialMessageXs.put(id, pos);
 										break;
 									}
 									default: {
@@ -276,7 +276,7 @@ public class GraphML2KEML {
 		
 		// ***************** Sequence Diagram ********************************
 		ArrayList<String> msgsInOrder = buildSequenceDiagram(conversation, authorPosition, conversationPartnerXs,
-				kemlNodes, potentialMessageExecutionXs, sequenceDiagramEdges, interrupts);
+				kemlNodes, potentialMessageXs, sequenceDiagramEdges, interrupts);
 		
 		// TODO we could use them to save preKnowledge in order
 		
@@ -354,14 +354,14 @@ public class GraphML2KEML {
 	
 	private ArrayList<String> buildSequenceDiagram(Conversation conversation, PositionalInformation authorPosition,
 			HashMap<String, PositionalInformation> conversationPartnerXs,
-			HashMap<String, Object> kemlNodes, HashMap<String, PositionalInformation> potentialMessageExecutionXs,
+			HashMap<String, Object> kemlNodes, HashMap<String, PositionalInformation> potentialMessageXs,
 			List<GraphEdge> edges, List<String> interrupts) {
 		
 		addOrderedConversationPartners(conversation, conversationPartnerXs, kemlNodes);
 		
 		Author author = conversation.getAuthor();
 		// just work by position: all message Specs should be below their LifeLine in order
-		ArrayList<String> authorMessagesInOrder = potentialMessageExecutionXs.entrySet().stream()
+		ArrayList<String> authorMessagesInOrder = potentialMessageXs.entrySet().stream()
 				.filter(s -> s.getValue().isOnLine(authorPosition))
 				.sorted((s,t) -> Float.compare(s.getValue().getyHigh(),t.getValue().getyHigh()))
 				.map(Map.Entry::getKey)
@@ -372,7 +372,7 @@ public class GraphML2KEML {
 		// TODO current code uses filter and is terribly inefficient if we ever have many conversation partners
 		HashMap<String, String> lifeLineFinder = new HashMap<String, String>();
 		conversationPartnerXs.entrySet().stream().forEach(partner -> {
-			potentialMessageExecutionXs.entrySet().stream()
+			potentialMessageXs.entrySet().stream()
 			.filter(s -> s.getValue().isOnLine(partner.getValue()))
 			.forEach(v -> {
 				lifeLineFinder.put(v.getKey(), partner.getKey());	
@@ -383,7 +383,7 @@ public class GraphML2KEML {
 		// we can first eliminate all that have no label to improve efficiency
 		edges.removeIf(s -> s.getLabel().isEmpty());
 				
-		MessageExecution[] msgs = new MessageExecution[authorMessagesInOrder.size()];
+		Message[] msgs = new Message[authorMessagesInOrder.size()];
 		
 		// now first work on interrupts as special cases:
 		interrupts.forEach(interrupt -> {
@@ -414,7 +414,7 @@ public class GraphML2KEML {
 				int index = srcIndexOnAuth.getAsInt();
 				String partnerId = lifeLineFinder.get(e.getTarget());
 				if (partnerId != null) {
-					//create a send message execution spec
+					//create a send message
 					SendMessage msg = factory.createSendMessage();
 					msg.setContent(e.getLabel());
 					msg.setTiming(index);
@@ -428,7 +428,7 @@ public class GraphML2KEML {
 					int index = targetIndexOnAuth.getAsInt();
 					String partnerId = lifeLineFinder.get(e.getSource());
 					if (partnerId != null) {
-						//create a receive message execution spec
+						//create a receive message
 						ReceiveMessage msg = factory.createReceiveMessage();
 						msg.setContent(e.getLabel());
 						msg.setTiming(index);
@@ -440,7 +440,7 @@ public class GraphML2KEML {
 			}
 		});
 		//now finally insert all messages in order
-		author.getMessageExecutions().addAll(Arrays.asList(msgs));
+		author.getMessages().addAll(Arrays.asList(msgs));
 		
 		return authorMessagesInOrder;
 	}

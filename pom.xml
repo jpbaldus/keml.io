@@ -32,5 +32,20 @@
     	<artifactId>jackson-dataformat-xml</artifactId>
     	<version>2.16.0</version>
 	</dependency>
+	<dependency>
+		<groupId>org.emfjson</groupId>
+		<artifactId>emfjson-jackson</artifactId>
+		<version>1.2.0</version>
+		<exclusions>
+			<exclusion>
+				<groupId>org.eclipse.emf</groupId>
+				<artifactId>org.eclipse.emf.common</artifactId>
+			</exclusion>
+			<exclusion>
+				<groupId>org.eclipse.emf</groupId>
+				<artifactId>org.eclipse.emf.ecore</artifactId>
+			</exclusion>
+		</exclusions>
+	</dependency>
   </dependencies>
 </project>

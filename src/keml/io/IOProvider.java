@@ -63,9 +63,13 @@ public class IOProvider {
 	private static void transformFile(File graphmlPath, KemlFileHandler fileHandler, File targetFolder, File originalConv) throws Exception {
 		Conversation conv = new GraphML2KEML().readFromPath(graphmlPath.getAbsolutePath());
 		ConversationAdder.addOriginalConv(conv, originalConv);
-		String kemlPath = targetFolder +"/" + FilenameUtils.removeExtension(graphmlPath.getName()) + ".keml";
+		String kemlBasePath = targetFolder +"/" + FilenameUtils.removeExtension(graphmlPath.getName());
+		String kemlPath = kemlBasePath + ".keml";
 		fileHandler.saveKeml(conv, kemlPath);
 		System.out.println("Saved file as "+kemlPath);
+		String kemlJSONPath = kemlBasePath + "-keml.json";
+		fileHandler.saveKemlJSON(conv, kemlJSONPath);
+		System.out.println("Saved file as "+kemlJSONPath);
 	}
 	
 	private static File getConvFileFromFile(File file, String conversationFolder) {

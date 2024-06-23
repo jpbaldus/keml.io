@@ -5,7 +5,8 @@ Bundle-SymbolicName: keml.io
 Bundle-Version: 1.0.0.qualifier
 Require-Bundle: org.eclipse.emf.ecore;bundle-version="2.35.0",
  org.apache.commons.commons-io,
- org.eclipse.emf.common
+ org.eclipse.emf.common,
+ keml;bundle-version="0.1.0"
 Import-Package: keml,
  keml.impl,
  keml.presentation,

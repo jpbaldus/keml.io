@@ -68,5 +68,9 @@ public class KemlFileHandler {
 		return (Conversation) resource.getContents().get(0);		
 	}
 	
+	public Conversation loadKemlJSON(String path) {
+		Resource resource = resSJSON.getResource(URI.createFileURI(path), true);
+		return (Conversation) resource.getContents().get(0);
+	}
 
 }

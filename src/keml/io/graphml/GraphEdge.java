@@ -36,15 +36,13 @@ public class GraphEdge {
 	private static InformationLinkType determineInformationLinkType(Element e) {
 		String targetShape = arrowHead(e);
 		switch (targetShape) {
-			case "white_diamond": return InformationLinkType.SUPPLEMENT;
-			case "white_circle": case "transparent_circle": case "circle": {
+			case "white_circle": case "transparent_circle": case "circle": return InformationLinkType.SUPPLEMENT;
+			case "crows_foot_many": {
 				if (isDashed(e))
 					return InformationLinkType.SUPPORT;
 				else
 					return InformationLinkType.STRONG_SUPPORT; 
 			}
-			case "black_circle": return InformationLinkType.STRONG_SUPPORT; // todo remove
-			case "skewed_dash": return InformationLinkType.ATTACK; // todo remove
 			case "cross": {
 				if (isDashed(e))
 					return InformationLinkType.ATTACK;

@@ -27,7 +27,7 @@ public class IOProvider {
 		
 		String folder;
 		if (args.length == 0) {
-			folder = "../keml.sample/case-study-log4j/2024-03-30-paperversion";
+			folder = "../keml.sample/introductoryExamples";
 		} else {
 			folder = args[0];			
 		}

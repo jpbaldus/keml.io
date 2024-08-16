@@ -4,9 +4,10 @@ This project offers basic functionality for KEML file I/O as well as some more a
 
 1) [Generate KEML files from graphML files](#generate-keml-files-from-graphml-files)
 2) [Split a ChatGPT conversation file](#split-a-chatgpt-conversation-file) holding all conversations into one file per conversation
-3) [Enhance an KEML file with original conversation data]() from the ChatGPT conversation JSON
+3) [Enhance an KEML file with original conversation data](#enhance-an-keml-file-with-original-conversation-data) from the ChatGPT conversation JSON
 
 Currently, all of these processes are executed when running the project but we plan to split this to allow for different work flows.
+The enhancement with ChatGPT original conversations is optional, the run suceeds even if no source for original conversations is given.
 
 ## Installation
 
@@ -44,4 +45,4 @@ Problems like not matching counts of these messages and those in the original co
 We plan to modify the project so that the user can choose to run just one of the possible processes. With this, one could for instance enhance KEML files that have been generated programatically.
 
 ## License
-The license of this project is that of the [group](https://gitlab.uni-koblenz.de/keml).
+The license of this project is that of the [group](https://github.com/keml-group).

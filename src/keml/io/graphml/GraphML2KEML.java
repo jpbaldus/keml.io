@@ -177,6 +177,10 @@ public class GraphML2KEML {
 										potentialMessageXs.put(id, pos);
 										break;
 									}
+									case "#FFCC99": {  //orange, used for intermediate nodes
+										nodeTypes.put(id, NodeType.INTERMEDIATE_NODE);
+										break;
+									}
 									default: {
 										throw new IllegalArgumentException("Unrecognized color: "+color);
 									}
@@ -205,6 +209,7 @@ public class GraphML2KEML {
 		// now work on edges to separate them: we need those of the sequence diagram to arrange the messages and can already define all relations between information in a second method
 		List<GraphEdge> sequenceDiagramEdges = new ArrayList<GraphEdge>();
 		List<GraphEdge> informationConnection = new ArrayList<GraphEdge>();
+		List<GraphEdge> informationINTConnection = new ArrayList<GraphEdge>();  //new list for intermediate nodes
 		List<GraphEdge> usedBy = new ArrayList<GraphEdge>();
 		List<GraphEdge> generates = new ArrayList<GraphEdge>();
 		edges.forEach(e -> 
@@ -250,11 +255,19 @@ public class GraphML2KEML {
 							informationConnection.add(e);
 							break;
 						}
+						case INTERMEDIATE_NODE: {  //save edge with intermediate node as target
+							informationINTConnection.add(e);
+							break;
+						}
 						default: {
 							throw new IllegalArgumentException("Node "+ e.getTarget() + " of type " + targetType + " not valid on edge from " +src);
 						}
 					}
 					break;				
+				}
+				case INTERMEDIATE_NODE: {  //save edge with intermediate node as source
+					informationINTConnection.add(e);
+					break;
 				}
 				case PRE_KNOWLEDGE: {
 					switch(targetType) {
@@ -279,6 +292,18 @@ public class GraphML2KEML {
 				kemlNodes, potentialMessageXs, sequenceDiagramEdges, interrupts);
 		
 		// TODO we could use them to save preKnowledge in order
+		
+		// ***************** Intermediate Nodes ********************** 
+		informationINTConnection.forEach(e1 -> {
+			//informationINTConnection.remove(e1);
+			informationINTConnection.forEach(e2 -> {
+				if (e1.getTarget().equals(e2.getSource())) {
+					e1.setTarget(e2.getTarget());
+					//informationINTConnection.remove(e2);
+					informationConnection.add(e1);
+				}
+			});
+		});
 		
 		// ***************** Connecting information and sequence diagram ********
 		addGeneratesAndRepeats(generates, informationNodeForwardMap, kemlNodes);

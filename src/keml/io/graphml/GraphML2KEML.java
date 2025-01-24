@@ -295,12 +295,13 @@ public class GraphML2KEML {
 		
 		// ***************** Intermediate Nodes ********************** 
 		informationINTConnection.forEach(e1 -> {
-			//informationINTConnection.remove(e1);
 			informationINTConnection.forEach(e2 -> {
 				if (e1.getTarget().equals(e2.getSource())) {
-					e1.setTarget(e2.getTarget());
-					//informationINTConnection.remove(e2);
-					informationConnection.add(e1);
+					//System.out.println(e1.getInformationLinkTypeString());
+					if (e1.getInformationLinkTypeString().equals("none")) {
+						e2.setSource(e1.getSource());
+						informationConnection.add(e1);
+					} else throw new IllegalArgumentException("Erstmal nur normale Attacks");
 				}
 			});
 		});

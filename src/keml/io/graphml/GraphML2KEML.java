@@ -3,6 +3,7 @@ package keml.io.graphml;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -210,6 +211,8 @@ public class GraphML2KEML {
 		List<GraphEdge> sequenceDiagramEdges = new ArrayList<GraphEdge>();
 		List<GraphEdge> informationConnection = new ArrayList<GraphEdge>();
 		List<GraphEdge> informationINTConnection = new ArrayList<GraphEdge>();  //new list for intermediate nodes
+		//List<GraphEdge> informationAAAConnection = new ArrayList<GraphEdge>();  //new list for attacks attacking attacks
+		List<Map.Entry<GraphEdge, GraphEdge>> informationAAAConnection = new ArrayList<>();
 		List<GraphEdge> usedBy = new ArrayList<GraphEdge>();
 		List<GraphEdge> generates = new ArrayList<GraphEdge>();
 		edges.forEach(e -> 
@@ -294,14 +297,24 @@ public class GraphML2KEML {
 		// TODO we could use them to save preKnowledge in order
 		
 		// ***************** Intermediate Nodes ********************** 
-		informationINTConnection.forEach(e1 -> {
-			informationINTConnection.forEach(e2 -> {
-				if (e1.getTarget().equals(e2.getSource())) {
-					//System.out.println(e1.getInformationLinkTypeString());
-					if (e1.getInformationLinkTypeString().equals("none")) {
-						e2.setSource(e1.getSource());
-						informationConnection.add(e1);
-					} else throw new IllegalArgumentException("Erstmal nur normale Attacks");
+		informationINTConnection.forEach(e2 -> {
+			String e2Source = e2.getSource();
+			informationINTConnection.forEach(e1 -> {
+				if (e1.getTarget().equals(e2Source)) {
+					String arrowHead = e1.getInformationLinkTypeString();
+					switch(arrowHead) {
+						case "none": {
+							e2.setSource(e1.getSource());
+							informationConnection.add(e2);
+							break;
+						}
+						case "cross": {
+							informationAAAConnection.add(new AbstractMap.SimpleEntry<>(e1, e2));
+							break;
+						}
+						default:
+							throw new IllegalArgumentException("Fehler");
+					}
 				}
 			});
 		});
@@ -324,6 +337,21 @@ public class GraphML2KEML {
 			i.setTarget(target);
 			i.setType(e.getInformationLinkType());
 			source.getCauses().add(i);
+		});
+		
+		// ***************** Attack attacks Attack **********************
+		informationAAAConnection.forEach(e -> {
+			System.out.println("Von "+e.getKey());
+			System.out.println("Zu "+e.getValue());
+			GraphEdge e1 = e.getKey();
+			Information source = getInformationFromKeml(e1.getSource(), informationNodeForwardMap, kemlNodes);
+			Information target = getInformationFromKeml(e.getValue().getId(), informationNodeForwardMap, kemlNodes);
+			InformationLink i = factory.createInformationLink();
+			i.setLinkText(e1.getLabel());
+			i.setTarget(target);
+			i.setType(e1.getInformationLinkType());
+			source.getCauses().add(i);
+			
 		});
 		
 		System.out.println("Read "+ nodeList.getLength() + " nodes and " + edgeList.getLength() + " edges into a conversation with "

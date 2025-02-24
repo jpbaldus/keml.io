@@ -21,6 +21,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.commons.io.FilenameUtils;
+
+import keml.AoAInformationLink;
 import keml.Author;
 import keml.Conversation;
 import keml.ConversationPartner;
@@ -41,7 +43,6 @@ import org.xml.sax.SAXException;
 public class GraphML2KEML {
 	
 	static KemlFactory factory = KemlFactory.eINSTANCE;
-
 	
 	public Conversation readFromPath (String path) throws ParserConfigurationException, FileNotFoundException, IOException, SAXException {
 		
@@ -180,6 +181,7 @@ public class GraphML2KEML {
 									}
 									case "#FFCC99": {  //orange, used for intermediate nodes
 										nodeTypes.put(id, NodeType.INTERMEDIATE_NODE);
+										ignoreNodes.put(id, id);
 										break;
 									}
 									default: {
@@ -210,9 +212,9 @@ public class GraphML2KEML {
 		// now work on edges to separate them: we need those of the sequence diagram to arrange the messages and can already define all relations between information in a second method
 		List<GraphEdge> sequenceDiagramEdges = new ArrayList<GraphEdge>();
 		List<GraphEdge> informationConnection = new ArrayList<GraphEdge>();
-		List<GraphEdge> informationINTConnection = new ArrayList<GraphEdge>();  //new list for intermediate nodes
-		//List<GraphEdge> informationAAAConnection = new ArrayList<GraphEdge>();  //new list for attacks attacking attacks
-		List<Map.Entry<GraphEdge, GraphEdge>> informationAAAConnection = new ArrayList<>();
+		List<GraphEdge> informationINTInConnection = new ArrayList<GraphEdge>();  //new list for incoming intermediate edges
+		List<GraphEdge> informationINTOutConnection = new ArrayList<GraphEdge>();  //new list for outgoing intermediate edges
+		List<Map.Entry<GraphEdge, GraphEdge>> informationAAAConnection = new ArrayList<>(); //new list for attacks attacking attacks but can become useless
 		List<GraphEdge> usedBy = new ArrayList<GraphEdge>();
 		List<GraphEdge> generates = new ArrayList<GraphEdge>();
 		edges.forEach(e -> 
@@ -259,7 +261,7 @@ public class GraphML2KEML {
 							break;
 						}
 						case INTERMEDIATE_NODE: {  //save edge with intermediate node as target
-							informationINTConnection.add(e);
+							informationINTInConnection.add(e);
 							break;
 						}
 						default: {
@@ -269,7 +271,15 @@ public class GraphML2KEML {
 					break;				
 				}
 				case INTERMEDIATE_NODE: {  //save edge with intermediate node as source
-					informationINTConnection.add(e);
+					informationINTOutConnection.add(e);
+					switch(targetType) {
+						case INTERMEDIATE_NODE: {
+							informationINTInConnection.add(e);
+						}
+						default: {
+							
+						}
+					}
 					break;
 				}
 				case PRE_KNOWLEDGE: {
@@ -295,21 +305,30 @@ public class GraphML2KEML {
 				kemlNodes, potentialMessageXs, sequenceDiagramEdges, interrupts);
 		
 		// TODO we could use them to save preKnowledge in order
-		
+
 		// ***************** Intermediate Nodes ********************** 
-		informationINTConnection.forEach(e2 -> {
+		class Counter {    //counter that counts number of edges without arrow tips
+		    int count = 0;
+		}
+		List<GraphEdge> isAnRecInformationConnection = new ArrayList<GraphEdge>(); //
+		List<GraphEdge> isAnAttackedInformationConnection = new ArrayList<GraphEdge>(); //
+		informationINTOutConnection.forEach(e2 -> {
 			String e2Source = e2.getSource();
-			informationINTConnection.forEach(e1 -> {
+			Counter noneCounter = new Counter();
+			informationINTInConnection.forEach(e1 -> {
 				if (e1.getTarget().equals(e2Source)) {
 					String arrowHead = e1.getInformationLinkTypeString();
 					switch(arrowHead) {
 						case "none": {
 							e2.setSource(e1.getSource());
 							informationConnection.add(e2);
+							noneCounter.count++;
 							break;
 						}
 						case "cross": {
 							informationAAAConnection.add(new AbstractMap.SimpleEntry<>(e1, e2));
+							isAnRecInformationConnection.add(e1);
+							isAnAttackedInformationConnection.add(e2);
 							break;
 						}
 						default:
@@ -317,11 +336,14 @@ public class GraphML2KEML {
 					}
 				}
 			});
+			if (noneCounter.count != 1)
+				throw new IllegalArgumentException("There must be exactly 1 edge with no arrow tip!");
+			else
+				noneCounter.count = 0;
 		});
 		
 		// ***************** Connecting information and sequence diagram ********
 		addGeneratesAndRepeats(generates, informationNodeForwardMap, kemlNodes);
-		
 		usedBy.forEach(e -> {
 			Information info = getInformationFromKeml(e.getSource(), informationNodeForwardMap, kemlNodes);
 			SendMessage msg = (SendMessage) kemlNodes.get(e.getTarget());
@@ -329,7 +351,7 @@ public class GraphML2KEML {
 		});
 		
 		// ***************** Information Connections **********************
-		informationConnection.forEach(e -> {
+		/*informationConnection.forEach(e -> {
 			Information source = getInformationFromKeml(e.getSource(), informationNodeForwardMap, kemlNodes);
 			Information target = getInformationFromKeml(e.getTarget(), informationNodeForwardMap, kemlNodes);
 			InformationLink i = factory.createInformationLink();
@@ -337,21 +359,72 @@ public class GraphML2KEML {
 			i.setTarget(target);
 			i.setType(e.getInformationLinkType());
 			source.getCauses().add(i);
-		});
+			informationAAAConnection.forEach(e2 -> {
+				if (e.equals(e2.getValue())) {
+					//AoAInformationLink i2 = factory.createAoAInformationLink();
+					//i2.setLinkText(e2.getKey().getLabel());
+					//System.out.println("2:"+e.getLabel());
+					//i2.setAoALinkType(e2.getKey().getInformationLinkType());
+					//i2.setTarget(i);
+					System.out.println(i);
+					//i.setTargetedBy(i2);
+					Information source2 = getInformationFromKeml(e2.getKey().getSource(), informationNodeForwardMap, kemlNodes);
+					//source2.getCausesAOA().add(i2);
+					
+					InformationLink i3 = factory.createInformationLink();
+					i3.setLinkText(e2.getKey().getLabel());
+					i3.setType(e2.getKey().getInformationLinkType());
+					i3.setAttacks(i);
+					source2.getCauses().add(i3);
+				}
+			});
+		});*/
 		
-		// ***************** Attack attacks Attack **********************
-		informationAAAConnection.forEach(e -> {
-			System.out.println("Von "+e.getKey());
-			System.out.println("Zu "+e.getValue());
-			GraphEdge e1 = e.getKey();
-			Information source = getInformationFromKeml(e1.getSource(), informationNodeForwardMap, kemlNodes);
-			Information target = getInformationFromKeml(e.getValue().getId(), informationNodeForwardMap, kemlNodes);
-			InformationLink i = factory.createInformationLink();
-			i.setLinkText(e1.getLabel());
-			i.setTarget(target);
-			i.setType(e1.getInformationLinkType());
-			source.getCauses().add(i);
-			
+		// ***************** Information ConnectionsV2 **********************
+		List<Map.Entry<GraphEdge, InformationLink>> informationAAAConnectionKEML = new ArrayList<>(); // was ist i passend zu e
+		List<GraphEdge> alreadyCreated = new ArrayList<GraphEdge>(); // wahrscheinlich unnötig
+		informationConnection.forEach(e -> {
+			if (alreadyCreated.contains(e)) { //alreadyCreated vllt unnötig
+				informationAAAConnectionKEML.forEach(e3 -> {
+					if (e.equals(e3.getKey())) {
+						InformationLink i = e3.getValue();
+						informationAAAConnection.forEach(e2 -> {
+							if (e.equals(e2.getValue())) {
+								Information source2 = getInformationFromKeml(e2.getKey().getSource(), informationNodeForwardMap, kemlNodes);
+								InformationLink i3 = factory.createInformationLink();
+								i3.setLinkText(e2.getKey().getLabel());
+								i3.setType(e2.getKey().getInformationLinkType());
+								i3.setAttacks(i);
+								source2.getCauses().add(i3);
+								alreadyCreated.add(e2.getKey());
+							}
+						});
+					}
+				});
+			} else {
+				Information source = getInformationFromKeml(e.getSource(), informationNodeForwardMap, kemlNodes);
+				Information target = getInformationFromKeml(e.getTarget(), informationNodeForwardMap, kemlNodes);
+				InformationLink i = factory.createInformationLink();
+				i.setLinkText(e.getLabel());
+				i.setTarget(target);
+				i.setType(e.getInformationLinkType());
+				source.getCauses().add(i);
+				informationAAAConnectionKEML.add(new AbstractMap.SimpleEntry<>(e, i));
+				informationAAAConnection.forEach(e2 -> {
+					if (e.equals(e2.getValue())) {
+						//System.out.println(i);
+						Information source2 = getInformationFromKeml(e2.getKey().getSource(), informationNodeForwardMap, kemlNodes);
+						InformationLink i3 = factory.createInformationLink();
+						i3.setLinkText(e2.getKey().getLabel());
+						i3.setType(e2.getKey().getInformationLinkType());
+						i3.setAttacks(i);
+						source2.getCauses().add(i3);
+						alreadyCreated.add(e2.getKey());
+						informationAAAConnectionKEML.add(new AbstractMap.SimpleEntry<>(e2.getKey(), i3));
+						System.out.println(e2.getValue()+" == "+i3);
+					}
+				});
+			}
 		});
 		
 		System.out.println("Read "+ nodeList.getLength() + " nodes and " + edgeList.getLength() + " edges into a conversation with "

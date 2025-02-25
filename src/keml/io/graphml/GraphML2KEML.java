@@ -26,6 +26,7 @@ import keml.AoAInformationLink;
 import keml.Author;
 import keml.Conversation;
 import keml.ConversationPartner;
+import keml.ITargetable;
 import keml.Information;
 import keml.InformationLink;
 import keml.KemlFactory;
@@ -382,10 +383,11 @@ public class GraphML2KEML {
 		
 		// ***************** Information ConnectionsV2 **********************
 		List<Map.Entry<GraphEdge, InformationLink>> informationAAAConnectionKEML = new ArrayList<>(); // was ist i passend zu e
+		List<Map.Entry<GraphEdge, ITargetable>> informationAAAConnectionKEML2 = new ArrayList<>();
 		List<GraphEdge> alreadyCreated = new ArrayList<GraphEdge>(); // wahrscheinlich unnötig
 		informationConnection.forEach(e -> {
 			if (alreadyCreated.contains(e)) { //alreadyCreated vllt unnötig
-				informationAAAConnectionKEML.forEach(e3 -> {
+				/*informationAAAConnectionKEML.forEach(e3 -> {
 					if (e.equals(e3.getKey())) {
 						InformationLink i = e3.getValue();
 						informationAAAConnection.forEach(e2 -> {
@@ -397,31 +399,87 @@ public class GraphML2KEML {
 								i3.setAttacks(i);
 								source2.getCauses().add(i3);
 								alreadyCreated.add(e2.getKey());
+								
+								ITargetable target27 = (ITargetable) i;
+								InformationLink i37 = factory.createInformationLink();
+								i37.setLinkText(e2.getKey().getLabel()+"(test)");
+								i37.setType(e2.getKey().getInformationLinkType());
+								i37.setTarget2(target27);
+								source2.getCauses().add(i37);
+								alreadyCreated.add(e2.getKey());
+							}
+						});
+					}
+				});*/
+				
+				informationAAAConnectionKEML2.forEach(e3 -> {
+					if (e.equals(e3.getKey())) {
+						ITargetable i = e3.getValue();
+						informationAAAConnection.forEach(e2 -> {
+							if (e.equals(e2.getValue())) {
+								/*Information source2 = getInformationFromKeml(e2.getKey().getSource(), informationNodeForwardMap, kemlNodes);
+								InformationLink i3 = factory.createInformationLink();
+								i3.setLinkText(e2.getKey().getLabel());
+								i3.setType(e2.getKey().getInformationLinkType());
+								i3.setAttacks(i);
+								source2.getCauses().add(i3);
+								alreadyCreated.add(e2.getKey());*/
+								
+								Information source2 = getInformationFromKeml(e2.getKey().getSource(), informationNodeForwardMap, kemlNodes);
+								ITargetable target27 = (ITargetable) i;
+								InformationLink i37 = factory.createInformationLink();
+								i37.setLinkText(e2.getKey().getLabel()+"(test)");
+								i37.setType(e2.getKey().getInformationLinkType());
+								i37.setTarget2(target27);
+								source2.getCauses().add(i37);
+								alreadyCreated.add(e2.getKey());
+								System.out.println("RecLink(schon erstellt) "+i37);
 							}
 						});
 					}
 				});
 			} else {
-				Information source = getInformationFromKeml(e.getSource(), informationNodeForwardMap, kemlNodes);
+				/*Information source = getInformationFromKeml(e.getSource(), informationNodeForwardMap, kemlNodes);
 				Information target = getInformationFromKeml(e.getTarget(), informationNodeForwardMap, kemlNodes);
 				InformationLink i = factory.createInformationLink();
 				i.setLinkText(e.getLabel());
 				i.setTarget(target);
 				i.setType(e.getInformationLinkType());
-				source.getCauses().add(i);
-				informationAAAConnectionKEML.add(new AbstractMap.SimpleEntry<>(e, i));
+				source.getCauses().add(i);*/
+				
+				Information source7 = getInformationFromKeml(e.getSource(), informationNodeForwardMap, kemlNodes);
+				ITargetable target7 = getTargetFromKeml(e.getTarget(), informationNodeForwardMap, kemlNodes);
+				InformationLink i7 = factory.createInformationLink();
+				i7.setLinkText(e.getLabel()+"(test)");
+				i7.setTarget2(target7);
+				i7.setType(e.getInformationLinkType());
+				source7.getCauses().add(i7);
+				System.out.println("Nur 1 Link "+i7);
+				//informationAAAConnectionKEML.add(new AbstractMap.SimpleEntry<>(e, i));
+				informationAAAConnectionKEML2.add(new AbstractMap.SimpleEntry<>(e, i7));
 				informationAAAConnection.forEach(e2 -> {
 					if (e.equals(e2.getValue())) {
-						//System.out.println(i);
-						Information source2 = getInformationFromKeml(e2.getKey().getSource(), informationNodeForwardMap, kemlNodes);
+						/*Information source2 = getInformationFromKeml(e2.getKey().getSource(), informationNodeForwardMap, kemlNodes);
 						InformationLink i3 = factory.createInformationLink();
 						i3.setLinkText(e2.getKey().getLabel());
 						i3.setType(e2.getKey().getInformationLinkType());
 						i3.setAttacks(i);
 						source2.getCauses().add(i3);
 						alreadyCreated.add(e2.getKey());
-						informationAAAConnectionKEML.add(new AbstractMap.SimpleEntry<>(e2.getKey(), i3));
-						System.out.println(e2.getValue()+" == "+i3);
+						informationAAAConnectionKEML.add(new AbstractMap.SimpleEntry<>(e2.getKey(), i3));*/
+						//System.out.println(e2.getValue()+" == "+i3);
+						
+						Information source2 = getInformationFromKeml(e2.getKey().getSource(), informationNodeForwardMap, kemlNodes);
+						ITargetable target27 = (ITargetable) i7;
+						InformationLink i37 = factory.createInformationLink();
+						i37.setLinkText(e2.getKey().getLabel()+"(test)");
+						i37.setType(e2.getKey().getInformationLinkType());
+						i37.setTarget2(target27);
+						source2.getCauses().add(i37);
+						//alreadyCreated.add(e2.getKey());
+						informationAAAConnectionKEML2.add(new AbstractMap.SimpleEntry<>(e2.getKey(), i37));
+						alreadyCreated.add(e2.getKey());
+						System.out.println("RecLink "+i37);
 					}
 				});
 			}
@@ -477,6 +535,17 @@ public class GraphML2KEML {
 			info = (Information) kemlNodes.get(informationNodeForwardMap.get(infoName));			
 		}
 		return info;
+	}
+	
+	//JP
+	private ITargetable getTargetFromKeml(String targetName, Map<String, String> informationNodeForwardMap, Map<String, Object> kemlNodes) {
+	    ITargetable target = (ITargetable) kemlNodes.get(targetName);
+	    
+	    if (target == null) { // Falls nicht direkt vorhanden, über die Hilfsmapping suchen
+	        target = (ITargetable) kemlNodes.get(informationNodeForwardMap.get(targetName));
+	    }
+	    
+	    return target;
 	}
 	
 	private ArrayList<String> buildSequenceDiagram(Conversation conversation, PositionalInformation authorPosition,

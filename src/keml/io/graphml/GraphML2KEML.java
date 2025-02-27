@@ -22,7 +22,6 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.commons.io.FilenameUtils;
 
-import keml.AoAInformationLink;
 import keml.Author;
 import keml.Conversation;
 import keml.ConversationPartner;
@@ -180,9 +179,9 @@ public class GraphML2KEML {
 										potentialMessageXs.put(id, pos);
 										break;
 									}
-									case "#FFCC99": {  //orange, used for intermediate nodes
+									case "#FFCC99": {  // NEW: orange, used for intermediate nodes
 										nodeTypes.put(id, NodeType.INTERMEDIATE_NODE);
-										ignoreNodes.put(id, id);
+										ignoreNodes.put(id, id); // NEW: these nodes are just a workaround for graphml files so they are not used in KEML files
 										break;
 									}
 									default: {
@@ -213,9 +212,9 @@ public class GraphML2KEML {
 		// now work on edges to separate them: we need those of the sequence diagram to arrange the messages and can already define all relations between information in a second method
 		List<GraphEdge> sequenceDiagramEdges = new ArrayList<GraphEdge>();
 		List<GraphEdge> informationConnection = new ArrayList<GraphEdge>();
-		List<GraphEdge> informationINTInConnection = new ArrayList<GraphEdge>();  //new list for incoming intermediate edges
-		List<GraphEdge> informationINTOutConnection = new ArrayList<GraphEdge>();  //new list for outgoing intermediate edges
-		List<Map.Entry<GraphEdge, GraphEdge>> informationAAAConnection = new ArrayList<>(); //new list for attacks attacking attacks but can become useless
+		List<GraphEdge> informationINTInConnection = new ArrayList<GraphEdge>();  // NEW: list of incoming edges (intermediate nodes)
+		List<GraphEdge> informationINTOutConnection = new ArrayList<GraphEdge>();  // NEW: list of outgoing edges (intermediate nodes)
+		List<Map.Entry<GraphEdge, GraphEdge>> informationAAAConnection = new ArrayList<>(); // NEW: list (e1,e2) where e1 attacks e2
 		List<GraphEdge> usedBy = new ArrayList<GraphEdge>();
 		List<GraphEdge> generates = new ArrayList<GraphEdge>();
 		edges.forEach(e -> 
@@ -261,7 +260,7 @@ public class GraphML2KEML {
 							informationConnection.add(e);
 							break;
 						}
-						case INTERMEDIATE_NODE: {  //save edge with intermediate node as target
+						case INTERMEDIATE_NODE: {  // NEW: save edge with intermediate node as target
 							informationINTInConnection.add(e);
 							break;
 						}
@@ -271,10 +270,10 @@ public class GraphML2KEML {
 					}
 					break;				
 				}
-				case INTERMEDIATE_NODE: {  //save edge with intermediate node as source
+				case INTERMEDIATE_NODE: {  // NEW: save edge with intermediate node as source
 					informationINTOutConnection.add(e);
 					switch(targetType) {
-						case INTERMEDIATE_NODE: {
+						case INTERMEDIATE_NODE: { // NEW: special case for edges that target edges and are targeted by edges
 							informationINTInConnection.add(e);
 						}
 						default: {
@@ -307,12 +306,12 @@ public class GraphML2KEML {
 		
 		// TODO we could use them to save preKnowledge in order
 
-		// ***************** Intermediate Nodes ********************** 
-		class Counter {    //counter that counts number of edges without arrow tips
+		// ***************** Intermediate Nodes ********************** (NEW: connects edge that is divides by intermediate node and change target of recursive edge to the link)
+		class Counter {    // counter that counts number of edges without arrow tips
 		    int count = 0;
 		}
-		List<GraphEdge> isAnRecInformationConnection = new ArrayList<GraphEdge>(); //
-		List<GraphEdge> isAnAttackedInformationConnection = new ArrayList<GraphEdge>(); //
+		List<GraphEdge> isARecInformationConnection = new ArrayList<GraphEdge>(); // saves edges that target edges
+		List<GraphEdge> isATargetedInformationConnection = new ArrayList<GraphEdge>(); // saves edges that are targeted by edges
 		informationINTOutConnection.forEach(e2 -> {
 			String e2Source = e2.getSource();
 			Counter noneCounter = new Counter();
@@ -320,20 +319,26 @@ public class GraphML2KEML {
 				if (e1.getTarget().equals(e2Source)) {
 					String arrowHead = e1.getInformationLinkTypeString();
 					switch(arrowHead) {
-						case "none": {
+						case "none": { // e2 and e1 are connected to on link in the KEML file, the edge must not have the same color or line style
 							e2.setSource(e1.getSource());
-							informationConnection.add(e2);
+							informationConnection.add(e2); 
 							noneCounter.count++;
 							break;
 						}
 						case "cross": {
 							informationAAAConnection.add(new AbstractMap.SimpleEntry<>(e1, e2));
-							isAnRecInformationConnection.add(e1);
-							isAnAttackedInformationConnection.add(e2);
+							isARecInformationConnection.add(e1); // save e1 as recursive edge
+							isATargetedInformationConnection.add(e2); // save e1 as targeted edge
+							break;
+						}
+						case "crows_foot_many": {
+							informationAAAConnection.add(new AbstractMap.SimpleEntry<>(e1, e2));
+							isARecInformationConnection.add(e1); // save e1 as recursive edge
+							isATargetedInformationConnection.add(e2); // save e1 as targeted edge
 							break;
 						}
 						default:
-							throw new IllegalArgumentException("Fehler");
+							throw new IllegalArgumentException("Not a common arrow tip: " + arrowHead);
 					}
 				}
 			});
@@ -381,105 +386,51 @@ public class GraphML2KEML {
 			});
 		});*/
 		
-		// ***************** Information ConnectionsV2 **********************
-		List<Map.Entry<GraphEdge, InformationLink>> informationAAAConnectionKEML = new ArrayList<>(); // was ist i passend zu e
-		List<Map.Entry<GraphEdge, ITargetable>> informationAAAConnectionKEML2 = new ArrayList<>();
-		List<GraphEdge> alreadyCreated = new ArrayList<GraphEdge>(); // wahrscheinlich unnötig
+		// ***************** Information Connections ********************** (NEW: revised KEML edge creation)
+		List<Map.Entry<GraphEdge, ITargetable>> informationConnectionMapGraphMl2KEML = new ArrayList<>(); // saves the KEML edge that matches the graphml edge
+		List<GraphEdge> alreadyCreated = new ArrayList<GraphEdge>(); // saves all edges for which a KEML file has already been created
 		informationConnection.forEach(e -> {
-			if (alreadyCreated.contains(e)) { //alreadyCreated vllt unnötig
-				/*informationAAAConnectionKEML.forEach(e3 -> {
-					if (e.equals(e3.getKey())) {
-						InformationLink i = e3.getValue();
-						informationAAAConnection.forEach(e2 -> {
-							if (e.equals(e2.getValue())) {
-								Information source2 = getInformationFromKeml(e2.getKey().getSource(), informationNodeForwardMap, kemlNodes);
-								InformationLink i3 = factory.createInformationLink();
-								i3.setLinkText(e2.getKey().getLabel());
-								i3.setType(e2.getKey().getInformationLinkType());
-								i3.setAttacks(i);
-								source2.getCauses().add(i3);
-								alreadyCreated.add(e2.getKey());
-								
-								ITargetable target27 = (ITargetable) i;
-								InformationLink i37 = factory.createInformationLink();
-								i37.setLinkText(e2.getKey().getLabel()+"(test)");
-								i37.setType(e2.getKey().getInformationLinkType());
-								i37.setTarget2(target27);
-								source2.getCauses().add(i37);
-								alreadyCreated.add(e2.getKey());
-							}
-						});
-					}
-				});*/
-				
-				informationAAAConnectionKEML2.forEach(e3 -> {
+			if (alreadyCreated.contains(e)) { 
+				// this is the special case of KEML edge creation where an recursive edge is targeted
+				informationConnectionMapGraphMl2KEML.forEach(e3 -> {
 					if (e.equals(e3.getKey())) {
 						ITargetable i = e3.getValue();
 						informationAAAConnection.forEach(e2 -> {
 							if (e.equals(e2.getValue())) {
-								/*Information source2 = getInformationFromKeml(e2.getKey().getSource(), informationNodeForwardMap, kemlNodes);
-								InformationLink i3 = factory.createInformationLink();
-								i3.setLinkText(e2.getKey().getLabel());
-								i3.setType(e2.getKey().getInformationLinkType());
-								i3.setAttacks(i);
-								source2.getCauses().add(i3);
-								alreadyCreated.add(e2.getKey());*/
-								
-								Information source2 = getInformationFromKeml(e2.getKey().getSource(), informationNodeForwardMap, kemlNodes);
-								ITargetable target27 = (ITargetable) i;
-								InformationLink i37 = factory.createInformationLink();
-								i37.setLinkText(e2.getKey().getLabel()+"(test)");
-								i37.setType(e2.getKey().getInformationLinkType());
-								i37.setTarget2(target27);
-								source2.getCauses().add(i37);
+								Information source = getInformationFromKeml(e2.getKey().getSource(), informationNodeForwardMap, kemlNodes);
+								ITargetable target = (ITargetable) i;
+								InformationLink iRecursive = factory.createInformationLink();
+								iRecursive.setLinkText(e2.getKey().getLabel());
+								iRecursive.setType(e2.getKey().getInformationLinkType());
+								iRecursive.setTarget2(target);
+								source.getCauses().add(iRecursive);
 								alreadyCreated.add(e2.getKey());
-								System.out.println("RecLink(schon erstellt) "+i37);
 							}
 						});
 					}
 				});
 			} else {
-				/*Information source = getInformationFromKeml(e.getSource(), informationNodeForwardMap, kemlNodes);
-				Information target = getInformationFromKeml(e.getTarget(), informationNodeForwardMap, kemlNodes);
+				// this is the standard case of KEML edge creation
+				Information source = getInformationFromKeml(e.getSource(), informationNodeForwardMap, kemlNodes);
+				ITargetable target = getTargetFromKeml(e.getTarget(), informationNodeForwardMap, kemlNodes);
 				InformationLink i = factory.createInformationLink();
 				i.setLinkText(e.getLabel());
-				i.setTarget(target);
+				i.setTarget2(target);
 				i.setType(e.getInformationLinkType());
-				source.getCauses().add(i);*/
-				
-				Information source7 = getInformationFromKeml(e.getSource(), informationNodeForwardMap, kemlNodes);
-				ITargetable target7 = getTargetFromKeml(e.getTarget(), informationNodeForwardMap, kemlNodes);
-				InformationLink i7 = factory.createInformationLink();
-				i7.setLinkText(e.getLabel()+"(test)");
-				i7.setTarget2(target7);
-				i7.setType(e.getInformationLinkType());
-				source7.getCauses().add(i7);
-				System.out.println("Nur 1 Link "+i7);
-				//informationAAAConnectionKEML.add(new AbstractMap.SimpleEntry<>(e, i));
-				informationAAAConnectionKEML2.add(new AbstractMap.SimpleEntry<>(e, i7));
+				source.getCauses().add(i);
+				informationConnectionMapGraphMl2KEML.add(new AbstractMap.SimpleEntry<>(e, i));
+				// this is the case of KEML edge creation where an edge is targeted
 				informationAAAConnection.forEach(e2 -> {
 					if (e.equals(e2.getValue())) {
-						/*Information source2 = getInformationFromKeml(e2.getKey().getSource(), informationNodeForwardMap, kemlNodes);
-						InformationLink i3 = factory.createInformationLink();
-						i3.setLinkText(e2.getKey().getLabel());
-						i3.setType(e2.getKey().getInformationLinkType());
-						i3.setAttacks(i);
-						source2.getCauses().add(i3);
+						Information sourceRec = getInformationFromKeml(e2.getKey().getSource(), informationNodeForwardMap, kemlNodes);
+						ITargetable targetRec = (ITargetable) i;
+						InformationLink iRecursive = factory.createInformationLink();
+						iRecursive.setLinkText(e2.getKey().getLabel());
+						iRecursive.setType(e2.getKey().getInformationLinkType());
+						iRecursive.setTarget2(targetRec);
+						sourceRec.getCauses().add(iRecursive);
+						informationConnectionMapGraphMl2KEML.add(new AbstractMap.SimpleEntry<>(e2.getKey(), iRecursive));
 						alreadyCreated.add(e2.getKey());
-						informationAAAConnectionKEML.add(new AbstractMap.SimpleEntry<>(e2.getKey(), i3));*/
-						//System.out.println(e2.getValue()+" == "+i3);
-						
-						Information source2 = getInformationFromKeml(e2.getKey().getSource(), informationNodeForwardMap, kemlNodes);
-						ITargetable target27 = (ITargetable) i7;
-						InformationLink i37 = factory.createInformationLink();
-						i37.setLinkText(e2.getKey().getLabel()+"(test)");
-						i37.setType(e2.getKey().getInformationLinkType());
-						i37.setTarget2(target27);
-						source2.getCauses().add(i37);
-						//alreadyCreated.add(e2.getKey());
-						informationAAAConnectionKEML2.add(new AbstractMap.SimpleEntry<>(e2.getKey(), i37));
-						alreadyCreated.add(e2.getKey());
-						System.out.println("RecLink "+i37);
 					}
 				});
 			}
@@ -529,6 +480,7 @@ public class GraphML2KEML {
 	}
 	
 	// needs to follow node forward map to get information and icon together, also not follow if the info is preknowledge
+	// no longer needed i guess
 	private Information getInformationFromKeml(String infoName, Map<String, String> informationNodeForwardMap, Map<String, Object> kemlNodes) {
 		Information info = (Information) kemlNodes.get(infoName);			
 		if (info == null) { // infoName is neither preknowledge, nor the real node -> need to follow helper map (it does not contain pre-knowledge)
@@ -537,11 +489,11 @@ public class GraphML2KEML {
 		return info;
 	}
 	
-	//JP
+	// NEW: revised function above for new meta model
 	private ITargetable getTargetFromKeml(String targetName, Map<String, String> informationNodeForwardMap, Map<String, Object> kemlNodes) {
 	    ITargetable target = (ITargetable) kemlNodes.get(targetName);
 	    
-	    if (target == null) { // Falls nicht direkt vorhanden, über die Hilfsmapping suchen
+	    if (target == null) { 
 	        target = (ITargetable) kemlNodes.get(informationNodeForwardMap.get(targetName));
 	    }
 	    

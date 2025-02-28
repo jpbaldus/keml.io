@@ -321,6 +321,7 @@ public class GraphML2KEML {
 					switch(arrowHead) {
 						case "none": { // e2 and e1 are connected to on link in the KEML file, the edge must not have the same color or line style
 							e2.setSource(e1.getSource());
+							e2.setLabel(e2.getLabel().concat(e1.getLabel()));
 							informationConnection.add(e2); 
 							noneCounter.count++;
 							break;

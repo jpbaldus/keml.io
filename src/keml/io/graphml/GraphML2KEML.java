@@ -403,7 +403,7 @@ public class GraphML2KEML {
 								InformationLink iRecursive = factory.createInformationLink();
 								iRecursive.setLinkText(e2.getKey().getLabel());
 								iRecursive.setType(e2.getKey().getInformationLinkType());
-								iRecursive.setTarget2(target);
+								iRecursive.setTarget(target);
 								source.getCauses().add(iRecursive);
 								alreadyCreated.add(e2.getKey());
 							}
@@ -416,7 +416,7 @@ public class GraphML2KEML {
 				ITargetable target = getTargetFromKeml(e.getTarget(), informationNodeForwardMap, kemlNodes);
 				InformationLink i = factory.createInformationLink();
 				i.setLinkText(e.getLabel());
-				i.setTarget2(target);
+				i.setTarget(target);
 				i.setType(e.getInformationLinkType());
 				source.getCauses().add(i);
 				informationConnectionMapGraphMl2KEML.add(new AbstractMap.SimpleEntry<>(e, i));
@@ -428,7 +428,7 @@ public class GraphML2KEML {
 						InformationLink iRecursive = factory.createInformationLink();
 						iRecursive.setLinkText(e2.getKey().getLabel());
 						iRecursive.setType(e2.getKey().getInformationLinkType());
-						iRecursive.setTarget2(targetRec);
+						iRecursive.setTarget(targetRec);
 						sourceRec.getCauses().add(iRecursive);
 						informationConnectionMapGraphMl2KEML.add(new AbstractMap.SimpleEntry<>(e2.getKey(), iRecursive));
 						alreadyCreated.add(e2.getKey());

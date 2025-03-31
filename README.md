@@ -31,7 +31,7 @@ However, further files are still processed.
 
 ### Recursive Edges
 - Due of yEd and graphML restrictions, recursive edges can be created by splitting the attacked edge with an orange (hexCode: ffcc99) node. The first part of the splitted edge should not have an arrow head. The recursive edge points to this special node.
-- keml.io created based on the graphML workaround KEML edges where the recursive edge points to the edge and not the node.
+- The new version of keml.io created based on the graphML workaround KEML edges where the recursive edge points to the edge and not the node.
 - Previously created graphML files are compatible with the new version of keml.io!
 
 ## Split a ChatGPT Conversation File
